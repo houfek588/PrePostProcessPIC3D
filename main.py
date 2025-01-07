@@ -3,12 +3,11 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import json
-from read_files import ReadFilesData, min_value, max_value
+from post_process.read_files import ReadFilesData, min_value, max_value
 import unit_convert
-import ploting
+from post_process import ploting
 from distutils.util import strtobool
-import numpy as np
-from unit_input import particles_parameters, const_e, const_M_e, T_e, n_e, T_i, const_M_pr, n_i
+from pre_process.unit_input import particles_parameters, const_e, const_M_e, T_e, n_e, T_i, const_M_pr, n_i
 
 
 

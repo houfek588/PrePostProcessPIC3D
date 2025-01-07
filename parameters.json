@@ -14,29 +14,29 @@
          "plot_length": {
               "show": "False",
               "save_to_file": "True",
-              "file_name": "plot_E_SI(x).png",
+              "file_name": "outputs/plot_E_SI(x).png",
               "time_parameter": 1
           },
         "plot_time": {
               "show": "False",
               "save_to_file": "False",
-              "file_name": "plot_E_SI(t).png",
+              "file_name": "outputs/plot_E_SI(t).png",
               "length_parameter": 4094
           },
         "plot_3D": {
               "show": "True",
               "save_to_file": "False",
-              "file_name": "plot3D_E(x,t).png"
+              "file_name": "outputs/plot3D_E(x,t).png"
           },
         "plot_wireframe": {
               "show": "False",
               "save_to_file": "False",
-              "file_name": "plot_wire(x,t).png"
+              "file_name": "outputs/plot_wire(x,t).png"
           },
         "plot_2D": {
               "show": "False",
               "save_to_file": "False",
-              "file_name": "plot2D(x,t).png"
+              "file_name": "outputs/plot2D(x,t).png"
           }
   }
 }

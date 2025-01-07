@@ -1,12 +1,8 @@
 import pyvista as pv
-import matplotlib.pyplot as mt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.animation import FuncAnimation
 import re
 import numpy as np
-import ploting
 import unit_convert
-from unit_input import particles_parameters, const_e, const_M_e, T_e, n_e, T_i, const_M_pr, n_i
+
 
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------

@@ -208,7 +208,7 @@ if __name__ == '__main__':
 
 
 
-    with open("iPIC_par.txt", "w") as file:
+    with open("../iPIC_par.txt", "w") as file:
         print_results(file)
 
     print_results(None)
