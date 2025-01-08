@@ -6,30 +6,6 @@ import unit_convert
 
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------
-# inputs
-
-# Load the VTK file
-# folder = "../res_data/beam_14_quiet/"
-# file_for_graph = "testMy01_rhoe2_0.vtk"
-# file_path = folder + file_for_graph
-#
-# # parameters
-# Lx = 1
-# Lz = 0.1
-# nx = 4096
-# nz = 1
-# num_of_files = 1000
-# step = 10
-# dt = 0.005
-# z_level = 0
-#
-# graph_animation = False
-# graph_3d = False
-# plot_xtE = True
-# save_gif = False
-# gif_name = "beam_11_E"
-
-
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------
 
@@ -227,11 +203,13 @@ def get_xz_data_vector(data, time_range, dim_val="x"):
 
 
 def max_value(inputlist):
-    return max([sublist[-1] for sublist in inputlist])
+    return max(max(sublist) for sublist in inputlist)
+    # return max([sublist[-1] for sublist in inputlist])
 
 
 def min_value(inputlist):
-    return min([sublist[-1] for sublist in inputlist])
+    return min(min(sublist) for sublist in inputlist)
+    # return min([sublist[-1] for sublist in inputlist])
 
 class ReadFilesData:
     def __init__(self, folder, file_for_graph, num_of_files, step, dt, nx, nz):
@@ -244,8 +222,6 @@ class ReadFilesData:
         # self.vector = not isinstance(data_x_t[0], np.floating)
 
     def is_vector(self):
-        print(self.data_x_t[0][0])
-        print(np.floating)
         return not isinstance(self.data_x_t[0][0], np.floating)
 
     def get_2D_data(self, vector_component="x"):
@@ -258,10 +234,6 @@ class ReadFilesData:
         return read_data_name(self.file_paths[0])
 
     def get_x_data(self, L):
-        # print(f"class L = {L}")
-        # print(f"class n = {n}")
-        # print(f"class x data len = {len(self.get_point_through_len(0))}")
-
         n = len(self.get_point_through_len(0))+1
         return [i * (L/n) for i in range(0, n - 1)]
 
@@ -288,19 +260,6 @@ class ReadFilesData:
         data = self.get_2D_data(dim_val)
         return [float(d) for d in data[t]]
 
-        # if not vector:
-        #     # Use list comprehension for efficiency and readability
-        #     return [float(d) for d in data[t]]
-        #
-        # # Map dim_val to the appropriate index
-        # dim_map = {"x": 0, "y": 1, "z": 2}
-        # dim_idx = dim_map.get(dim_val, 0)  # Default to 0 if dim_val is invalid
-        #
-        # print(f"dim_idx = {dim_idx}")
-        # print(f"data[t][d] = {data[t][1]}")
-        # # Extract the specified dimension using list comprehension
-        # return [float(d[dim_idx]) for d in data[t]]
-
     def get_point_through_time(self, n, dim_val="x"):
         """
         Extracts a list of values through time for a specific point index.
@@ -316,16 +275,7 @@ class ReadFilesData:
         """
         data = self.get_2D_data(dim_val)
         return [float(d[n]) for d in data]
-        # if not vector:
-        #     # Scalar data extraction
-        #     return [float(d[n]) for d in data]
-        #
-        # # Map dim_val to the appropriate index
-        # dim_map = {"x": 0, "y": 1, "z": 2}
-        # dim_idx = dim_map.get(dim_val, 0)  # Default to 0 if dim_val is invalid
-        #
-        # # Vector data extraction
-        # return [float(d[n][dim_idx]) for d in data]
+
 
     def print_mesh_data(self):
         mesh = pv.read(self.file_paths[0])
@@ -342,189 +292,9 @@ class ReadFilesData:
         print("Data length: " + str(len(point_data)))
 
 
-# PIC_data = ReadFilesData(folder, file_for_graph, num_of_files, step, dt)
-# print(f" Is vector? {PIC_data.is_vector()}")
-# # file_paths = create_file_names(folder, file_for_graph, num_of_files, step)
-# # print(file_paths)
-# data_x_t = PIC_data.get_2D_data("x")
-# data_name = PIC_data.get_data_name()
-# axis_time = PIC_data.get_time_data()
-# axis_x = PIC_data.get_x_data(Lx)
-#
-#
-#
-#
-# col = z_level
-# row = nx
-#
-# # graph data
-#
-# z_axis = np.array(get_lin_x_data(Lz, nz))
-#
-# print(f"data size: m x n : {nx} x {nz} = {nz * nx}")
-#
-#
-#
-# # units
-# electron = particles_parameters(const_e, T_e, const_M_e, n_e*10**6)
-# ion = particles_parameters(const_e, T_i, const_M_pr, n_i*10**6)
-#
-# axis_x_SI = unit_convert.rescale_list(axis_x, ion.get_ion_skin_depth())
-# axis_time_SI = unit_convert.rescale_list(axis_time, 1/ion.get_plasma_frequency())
-# print(f"time {4163 / ion.get_plasma_frequency()}")
-# print(f"time step: {dt} -> {(1/ion.get_plasma_frequency()) * dt} s")
-# aa = 50
-# print(f"data availeble for every: {axis_time_SI[aa] - axis_time_SI[aa-1]} s")
-#
-# # print(axis_x[-1])
-# # print(axis_x_SI[-1])
-# print(f"data type {max_value(data_x_t)}")
-#
-# if graph_3d:
-#     mesh = pv.read(file_path)
-#     point_data = mesh.point_data[mesh.array_names[0]]
-#     meshes = [pv.read(file) for file in PIC_data.get_file_paths()]
-#     plotter = pv.Plotter()
-#     if graph_animation:
-#
-#         if save_gif:
-#             # animation plot data, save to gif
-#
-#             plotter.open_gif(gif_name + ".gif")  # Save as a GIF (optional)
-#
-#             for mesh in meshes:
-#                 plotter.clear()  # Clear previous frame
-#                 plotter.add_mesh(mesh, scalars=mesh.point_data.keys()[0], show_edges=False)  # Replace `YourScalarName` with scalar field
-#                 plotter.camera_position = "xz"
-#                 plotter.write_frame()  # Save frame to the GIF
-#
-#             plotter.close()  # Close the GIF writer
-#
-#         else:
-#             # plotter1 = pv.Plotter()
-#             for mesh in meshes:
-#                 plotter.clear()
-#                 plotter.add_mesh(mesh, scalars=mesh.point_data.keys()[0], show_edges=False)
-#                 plotter.camera_position = "xz"
-#                 plotter.show(auto_close=False, interactive_update=True)
-#
-#     else:
-#         print(mesh.point_data.keys()[0])
-#         # simply plot data
-#         plotter.add_mesh(mesh, scalars=mesh.point_data.keys()[0], show_edges=False, color='white')
-#         plotter.camera_position = "xz"
-#         plotter.add_title(f"Data for {mesh.point_data.keys()[0]}")
-#         plotter.show_axes()
-#         plotter.show()
-#
-#         # Create a figure and 3D axes
-#         # fig = mt.figure()
-#         # ax = fig.add_subplot(111, projection='3d')
-#
-#         # Generate example data
-#         # x = np.linspace(-5, 5, 100)
-#         # y = np.linspace(-5, 5, 100)
-#         # X, Y = np.meshgrid(x, y)
-#         # Z = np.sin(np.sqrt(X ** 2 + Y ** 2))
-#
-#         # X, Y = np.meshgrid(axis_x, axis_time)
-#         # Z = np.array(PIC_data.get_2D_data())
-#
-#
-#         # print(f"len X: {len(X)}")
-#         # print(f"len X[0]: {len(X[0])}")
-#         # print(f"len Y: {len(Y)}")
-#         # print(f"len Y[0]: {len(Y[0])}")
-#         # print(f"len Z: {len(Z)}")
-#         # print(f"len Z[0]: {len(Z[0])}")
-#         #
-#         #
-#         #
-#         # # Plot a surface
-#         # surf = ax.plot_surface(X, Y, Z, cmap='viridis')
-#         # surf = ax.plot_surface(x_axis, time_scale, data_x_t, cmap='viridis')
-#
-#         # Add color bar
-#         # fig.colorbar(surf)
-#         #
-#         # # Add labels
-#         # ax.set_title("3D Surface Plot")
-#         # ax.set_xlabel("X Axis")
-#         # ax.set_ylabel("Y Axis")
-#         # ax.set_zlabel("Z Axis")
-#         #
-#         # # Show the plot
-#         # mt.show()
-#
-# elif plot_xtE:
-#     # val1 = get_point_through_len(data_x_t, len(axis_time)-1, PIC_data.is_vector(), "x")
-#     x_level = 1
-#     val1 = PIC_data.get_point_through_len(x_level, "x")
-#     descr1 = ploting.PlotDescription(f"data {data_name} for time {axis_time[x_level]}", "length [isd]", "el. intensity [ ]")
-#
-#     # ploting.plot_data(axis_x, val1, descr1, False, "plot_E(x)")
-#
-#     descr11 = ploting.PlotDescription(f"data {data_name} for t = {round(axis_time_SI[x_level], 3)} s", "length [m]", "el. intensity [ ]")
-#     descr11.set_ylim(min_value(data_x_t)*1.1, max_value(data_x_t)*1.1)
-#     ploting.plot_data(axis_x_SI, val1, descr11, True, "plot_E_SI(x)")
-#
-#     # val2 = get_point_through_time(data_x_t, 4094, PIC_data.is_vector(), "x")
-#     t_level = 4094
-#     val2 = PIC_data.get_point_through_time(t_level, "x")
-#     print(f"len val2: {len(val2)}")
-#     print(f"len x_axis: {len(axis_x)}")
-#     descr2 = ploting.PlotDescription(f"data {data_name} for len {axis_x[4094]}", "time [pf]", "el. intensity [ ]")
-#     # ploting.plot_data(axis_time, val2, descr2, True, "plot3D_E(t)")
-#
-#     descr22 = ploting.PlotDescription(f"data {data_name} for x = {round(axis_x_SI[t_level],1)} m", "time [s]", "el. intensity [ ]")
-#     descr22.set_ylim(min_value(data_x_t)*1.1, max_value(data_x_t)*1.1)
-#     ploting.plot_data(axis_time_SI, val2, descr22, True, "plot_E_SI(t)")
-#
-#     descr3D = ploting.PlotDescription(f"time development for {data_name}","length [m]","time [s]","el. intensity [ ]")
-#     ploting.plot3D_data(axis_x_SI, axis_time_SI, PIC_data.get_2D_data(), descr3D,True, "plot3D_E(x,t)")
-#
-#     ploting.plot3Dwire_data(axis_x_SI, axis_time_SI, PIC_data.get_2D_data(), descr3D, False, "plot3D_E(x,t)")
-#     ploting.plot3Dplane_data(axis_x_SI, axis_time_SI, PIC_data.get_2D_data(), descr3D, False, "plot3D_E(x,t)")
-#
-#     ploting.plot_all_graphs()
-#
-# else:
-#     mesh = pv.read(file_path)
-#     point_data = mesh.point_data[mesh.array_names[0]]
-#     print(f"data len: {len(point_data)}")
-#     if graph_animation:
-#         x = axis_x
-#         # Set up the figure and axis
-#         fig, ax = mt.subplots()
-#         ax.set_xlim(0, axis_x[-1])
-#         ax.set_ylim(point_data.min()*1.1, point_data.max()*1.1)
-#         line, = ax.plot([], [], lw=2)
-#
-#         # Update function
-#
-#         # Create animation
-#         anim = FuncAnimation(fig, update, frames=100, interval=50, blit=True)
-#
-#         # Display
-#         mt.show()
-#
-#     else:
-#         if PIC_data.is_vector():
-#             mt.plot(axis_x, get_data_row(point_data, col, row), linestyle='-', label=["X", "Y", "Z"])
-#             mt.legend()
-#         else:
-#             mt.plot(axis_x, get_data_row(point_data, col, row), linestyle='-')
-#
-#         # Add labels and title
-#         mt.xlabel("length (ion skin depth)")
-#         mt.ylabel("value " + mesh.point_data.keys()[0])
-#         mt.title(f"X data for {mesh.point_data.keys()[0]}, Z-level is {z_axis[col]} isd")
-#           # Add legend for clarity
-#
-#         # Show the plot
-#         mt.grid(True)  # Optional: Add gridlines
-#         mt.show()
-#
-#
-#
-#
+    # def get_global_min(self):
+    #     return min(min(sublist) for sublist in self.get_2D_data())
+    #
+    # def get_global_max(self):
+    #     return max(max(sublist) for sublist in self.get_2D_data())
+

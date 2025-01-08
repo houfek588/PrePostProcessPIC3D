@@ -10,12 +10,12 @@ class PlotDescription:
         self.label_y = label_y
         self.label_z = label_z
 
-        self.ymax = 0
-        self.ymin = 0
+        self.y_max = 0
+        self.y_min = 0
 
     def set_ylim(self, minimum, maximum):
-        self.ymax = maximum
-        self.ymin = minimum
+        self.y_max = maximum
+        self.y_min = minimum
 
 
 
@@ -33,10 +33,10 @@ def plot_data(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, 
     if len(dataY) < 5:
         for i in range(0 ,len(dataY)):
             plt.plot(dataX, dataY[i])
-            plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
+            # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
     else:
         plt.plot(dataX, dataY)
-        plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
+        # plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
 
     plt.xlabel(descr.label_x)
     plt.ylabel(descr.label_y)
@@ -46,12 +46,12 @@ def plot_data(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, 
     # Show data points
 
 
-    if descr.ymax == 0 and descr.ymin == 0:
+    if descr.y_max == 0 and descr.y_min == 0:
         print("y limits dont used")
         pass
     else:
-        print(f"y limits ({descr.ymin}, {descr.ymax})")
-        plt.ylim(descr.ymin, descr.ymax)
+        print(f"y limits ({descr.y_min}, {descr.y_max})")
+        plt.ylim(descr.y_min, descr.y_max)
 
     if save_to_file:
         # Save the plot to a file
@@ -148,20 +148,21 @@ def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: 
     fig = plt.figure(figsize=(16/scale, 9/scale))
     ax = fig.add_subplot()
 
-    X, Y = np.meshgrid(dataX, dataY)
+    # X, Y = np.meshgrid(dataX, dataY)
     Z = np.array(dataZ)
     # ground = np.zeros_like(X)
 
     t = np.linspace(0, 2 * np.pi, 1024)
-    data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
+    # data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
 
     # fig, ax = plt.subplots()
+    # plt.imshow(Z, aspect='auto', extent=(axis_x_SI[0], axis_x_SI[-1], axis_time_SIms[0], axis_time_SIms[-1]),
+    #            cmap='viridis')
+    im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
+               cmap='viridis', origin="lower", vmin=descr.y_min, vmax=descr.y_max)
+    ax.set_title(descr.title)
 
-    im = ax.imshow(Z)
-    ax.set_title('Pan on the colorbar to shift the color mapping\n'
-                 'Zoom on the colorbar to scale the color mapping')
-
-    fig.colorbar(im, ax=ax, label='Interactive colorbar')
+    fig.colorbar(im, ax=ax, label=descr.label_z)
 
     # nx, ny, nz = 8, 10, 5
     # data_xy = np.arange(ny * nx).reshape(ny, nx) + 15 * np.random.random((ny, nx))

@@ -3,10 +3,12 @@ import math
 # constants
 const_K_b = 1.380649*10**(-23)
 const_e = 1.602176634*10**(-19)
-const_M_e = 9.1093837139*10**(-31)
+# const_M_e = 9.1093837139*10**(-31)
 const_M_pr = 1.67262192595*10**(-27)
 const_eps_0 = 8.8541878128*10**(-12)
 const_c = 2.99792458*10**8
+const_M_e = const_M_pr/64
+# const_M_pr = 64*const_M_e
 
 class Converter:
     def __init__(self, vel_const, len_const, rho_const, time_const, charge_const):
@@ -43,7 +45,7 @@ def convert_rad_to_hz(inp):
 # simulation
 len_x = 1
 nx = 4096
-
+dt = 0.005
 
 
 # background
@@ -147,7 +149,7 @@ def print_results(file = None):
     print(f"\nx length: {len_x} isd = {ion_skin_i} m;  (isd = ion skin depth)", file=file)
     print(f"dt time: {1} if = {1/om_p_i} s;  (if = ion frequency)", file=file)
     print(f"\tin SIM: x length: {len_x} isd = {len_x*ion_skin_i} m", file=file)
-    # print(f"\tin SIM: dt time: {dt} if = {(1 / om_p_i)*dt} s", file=file)
+    print(f"\tin SIM: dt time: {dt} if = {(1 / om_p_i)*dt} s", file=file)
     print(f"number of cells in x direction is {nx}", file=file)
     print(f"\tin SIM: length step size: {(len_x*ion_skin_i)/nx} m", file=file)
     print(f"simulation resolution is dx = {dx} (should be < 1)", file=file)
@@ -172,7 +174,7 @@ def print_results(file = None):
 
     print(str_line, file=file)
 
-print(f"name {__name__}")
+# print(f"name {__name__}")
 if __name__ == '__main__':
     electron = particles_parameters(const_e, T_e, const_M_e, n_e * 10 ** 6)
     electron_beam = particles_parameters(const_e, T_b, const_M_e, n_b * 10 ** 6)
