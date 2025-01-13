@@ -211,67 +211,207 @@ def min_value(inputlist):
     return min(min(sublist) for sublist in inputlist)
     # return min([sublist[-1] for sublist in inputlist])
 
-class ReadFilesData:
+def add_suffix(file_name, suffix):
+    splited_name = file_name.split(".")
+    return splited_name[0] + suffix + splited_name[1]
+
+class ReadVTKFilesData:
     def __init__(self, folder, file_for_graph, num_of_files, step, dt, nx, nz):
+        """
+                Initializes the ReadFilesData class.
+
+                Args:
+                    folder (str): The folder containing the files.
+                    file_for_graph (str): The base name of the file for graphing.
+                    num_of_files (int): Total number of files.
+                    step (int): Step size for file loading.
+                    dt (float): Time step for the simulation.
+                    nx (int): Number of points in the x-direction.
+                    nz (int): Number of points in the z-direction.
+                """
         self.file_paths = create_file_names(folder, file_for_graph, num_of_files, step)
         self.num_of_files = num_of_files
         self.step = step
         self.dt = dt
 
         self.data_x_t = read_file_time_dataset(self.file_paths, nx, nz)
-        # self.vector = not isinstance(data_x_t[0], np.floating)
+        self.data2D_x = None
+        self.data2D_y = None
+        self.data2D_z = None
+        print("All files loaded...")
 
     def is_vector(self):
+        """Checks if the data is vector data."""
+        # return isinstance(self.data_x_t[0][0], (list, tuple))
         return not isinstance(self.data_x_t[0][0], np.floating)
 
+    def preprocess_2D_data(self,  vector_component="x"):
+        """
+                    Extracts a 2D array of data over time for a specified vector component.
+
+                    Args:
+                        vector_component (str): The dimension to extract ("x", "y", or "z"). Default is "x".
+
+                    Returns:
+                        list: A 2D list of values for the specified component across all time steps.
+                    """
+        # Check if the data is vector data
+        if not self.is_vector():
+            return self.data_x_t  # Return scalar data directly
+
+        # Map vector component to index
+        dim_mapping = {"x": 0, "y": 1, "z": 2}
+        if vector_component not in dim_mapping:
+            raise ValueError(
+                f"Invalid vector component '{vector_component}'. Expected one of {list(dim_mapping.keys())}.")
+
+        dim_idx = dim_mapping[vector_component]
+
+        # Use a nested list comprehension to extract the specified vector component
+        return [[float(d[dim_idx]) for d in time_step] for time_step in self.data_x_t]
+
+
     def get_2D_data(self, vector_component="x"):
-        if self.is_vector():
-            return get_xz_data_vector(self.data_x_t, self.get_time_data(), vector_component)
-        else:
-            return self.data_x_t
+        """
+            Extracts a 2D array of data over time for a specified vector component.
+
+            Args:
+                vector_component (str): The dimension to extract ("x", "y", or "z"). Default is "x".
+
+            Returns:
+                list: A 2D list of values for the specified component across all time steps.
+            """
+        # Check if the data is vector data
+        if not self.is_vector():
+            return self.data_x_t  # Return scalar data directly
+
+        # Map vector component to index
+        dim_mapping = {"x": 0, "y": 1, "z": 2}
+        if vector_component not in dim_mapping:
+            raise ValueError(
+                f"Invalid vector component '{vector_component}'. Expected one of {list(dim_mapping.keys())}.")
+
+        dim_idx = dim_mapping[vector_component]
+
+        if dim_idx == 0:
+            if self.data2D_x == None:
+                print("data x loading...")
+                self.data2D_x = self.preprocess_2D_data("x")
+            return self.data2D_x
+
+        if dim_idx == 1:
+            if self.data2D_y == None:
+                self.data2D_y = self.preprocess_2D_data("y")
+            return self.data2D_y
+
+        if dim_idx == 2:
+            if self.data2D_z == None:
+                self.data2D_z = self.preprocess_2D_data("z")
+            return self.data2D_z
+
+        # Use a nested list comprehension to extract the specified vector component
+        # return [[float(d[dim_idx]) for d in time_step] for time_step in self.data_x_t]
+        # if self.is_vector():
+    #         """
+    #             Extracts a vector of data over a specified time range for a given dimension.
+    #
+    #             Args:
+    #                 data (list): The input data containing vectors over time.
+    #                 time_range (list): A list of time indices to extract data for.
+    #                 dim_val (str): The dimension to extract ("x", "y", or "z"). Default is "x".
+    #
+    #             Returns:
+    #                 list: A list of vectors for the specified dimension across the given time range.
+    #             """
+    #         # Map dimension to index
+    #         dim_mapping = {"x": 0, "y": 1, "z": 2}
+    #         if vector_component not in dim_mapping:
+    #             raise ValueError(f"Invalid dimension value '{vector_component}'. Expected one of {list(dim_mapping.keys())}.")
+    #
+    #         # Extract data for the specified time range and dimension
+    #         aaa = []
+    #         for i in range(0, len(self.get_time_data())):
+    #
+    #             if not self.is_vector():
+    #                 # Use list comprehension for efficiency and readability
+    #                 return [float(d) for d in self.data_x_t[i]]
+    #
+    #                 # Map dim_val to the appropriate index
+    #             dim_map = {"x": 0, "y": 1, "z": 2}
+    #             dim_idx = dim_map.get(vector_component, 0)  # Default to 0 if dim_val is invalid
+    #
+    #             # Extract the specified dimension using list comprehension
+    #             bbb = []
+    #             for d in self.data_x_t[i]:
+    #                 bbb.append(float(d[dim_idx]))
+    #             # return [float(d[dim_idx]) for d in data[t]]
+    #             rrr = bbb
+    #             # rrr = get_point_through_len(self.data_x_t, i, True, vector_component)
+    #             aaa.append(rrr)
+    #
+    #
+    #         return aaa
+    #     if self.is_vector():
+    #         return get_xz_data_vector(self.data_x_t, self.get_time_data(), vector_component)
+    #     else:
+    #         return self.data_x_t
 
     def get_data_name(self):
+        """Gets the name of the data from the first file."""
         return read_data_name(self.file_paths[0])
 
     def get_x_data(self, L):
-        n = len(self.get_point_through_len(0))+1
-        return [i * (L/n) for i in range(0, n - 1)]
+        """
+                Generates the x-axis values based on the domain length.
+
+                Args:
+                    L (float): The length of the domain.
+
+                Returns:
+                    list: x-axis values.
+                """
+        n = len(self.get_point_through_len(0)) + 1
+        return [i * (L / n) for i in range(n - 1)]
+
 
     def get_time_data(self):
+        """
+                Generates the time data based on the time step and total cycles.
+
+                Returns:
+                    list: A rescaled list of time values.
+                """
         cycles = list(range(0, self.num_of_files, self.step))
         return unit_convert.rescale_list(cycles, self.dt)
 
     def get_file_paths(self):
+        """Returns the list of file paths."""
         return self.file_paths
 
     def get_point_through_len(self, t, dim_val="x"):
         """
-            Extracts a list of values based on whether the input data is a scalar or a vector.
+        Extracts data for a specific time step across all points.
 
-            Args:
-                data (list): A list of data points.
-                t (int): The index of the time step.
-                vector (bool): Indicates whether the data is a vector (True) or scalar (False).
-                dim_val (str): The dimension to extract ("x", "y", "z") if vector is True.
+        Args:
+            t (int): The time step index.
+            dim_val (str): The dimension to extract ("x", "y", "z").
 
-            Returns:
-                list: A list of float values extracted based on the input parameters.
-            """
+        Returns:
+            list: A list of float values for the specified time step and dimension.
+        """
         data = self.get_2D_data(dim_val)
         return [float(d) for d in data[t]]
 
     def get_point_through_time(self, n, dim_val="x"):
         """
-        Extracts a list of values through time for a specific point index.
+        Extracts data over time for a specific point.
 
         Args:
-            data (list): A list of time-step data.
-            n (int): The point index to extract data for.
-            vector (bool): Indicates whether the data is a vector (True) or scalar (False).
-            dim_val (str): The dimension to extract ("x", "y", "z") if vector is True.
+            n (int): The point index.
+            dim_val (str): The dimension to extract ("x", "y", "z").
 
         Returns:
-            list: A list of float values extracted across time for the given point index.
+            list: A list of float values across time for the specified point and dimension.
         """
         data = self.get_2D_data(dim_val)
         return [float(d[n]) for d in data]
@@ -298,3 +438,36 @@ class ReadFilesData:
     # def get_global_max(self):
     #     return max(max(sublist) for sublist in self.get_2D_data())
 
+
+class ReadHDFFilesData(ReadVTKFilesData):
+    def __init__(self, folder, file_for_graph, num_of_files, step, dt, nx, nz):
+        """
+                Initializes the ReadFilesData class.
+
+                Args:
+                    folder (str): The folder containing the files.
+                    file_for_graph (str): The base name of the file for graphing.
+                    num_of_files (int): Total number of files.
+                    step (int): Step size for file loading.
+                    dt (float): Time step for the simulation.
+                    nx (int): Number of points in the x-direction.
+                    nz (int): Number of points in the z-direction.
+                """
+        self.file_paths = create_file_names(folder, file_for_graph, num_of_files, step)
+        self.num_of_files = num_of_files
+        self.step = step
+        self.dt = dt
+
+        self.data_x_t = read_file_time_dataset(self.file_paths, nx, nz)
+        self.data2D_x = None
+        self.data2D_y = None
+        self.data2D_z = None
+        print("All files loaded...")
+
+
+    def read_hdf_file(self):
+        pass
+
+
+if __name__ == '__main__':
+    file = ""

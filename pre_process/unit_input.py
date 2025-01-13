@@ -15,20 +15,29 @@ class Converter:
         self.vel_const = vel_const
         self.len_const = len_const
         self.rho_const = rho_const
-        self.time_const = time_const
+        self.time_const = 1/time_const
         self.charge_const = charge_const
 
-    def convert_velocity_SI_to_sim(self, vel_SI):
+    def velocity_SI_to_sim(self, vel_SI):
         return vel_SI / self.vel_const
 
-    def convert_density_SI_to_sim(self, density_SI):
+    def velocity_sim_to_SI(self, vel_SIM):
+        return vel_SIM * self.vel_const
+
+    def density_SI_to_sim(self, density_SI):
         return density_SI / self.rho_const
 
-    def convert_time_SI_to_sim(self, time_SI):
-        return time_SI * self.time_const
+    def time_SI_to_sim(self, time_SI):
+        return time_SI / self.time_const
 
-    def convert_length_SI_to_sim(self, len_SI):
+    def time_sim_to_SI(self, time_SIM):
+        return time_SIM * self.time_const
+
+    def length_SI_to_sim(self, len_SI):
         return len_SI / self.len_const
+
+    def length_sim_to_SI(self, len_SIM):
+        return len_SIM * self.len_const
 
 def convert_ev_to_kelvin(inp):
     return inp * (const_e/const_K_b)
@@ -39,13 +48,16 @@ def convert_rad_to_hz(inp):
     return (inp/(2*math.pi))
 
 
+def get_debey_length(eps_0, K_B, temp, n_e, q_e):
+    return math.sqrt((eps_0 * K_B * temp)/(n_e**6 * q_e**2))
 
 
 # input from Solar wind
 # simulation
-len_x = 1
+len_x = 0.75
 nx = 4096
-dt = 0.005
+dt = 0.0001
+num_cycles = 80000
 
 
 # background
@@ -108,6 +120,7 @@ class particles_parameters:
 
 def print_results(file = None):
     str_line = "\n<--------------------------------------------------------------------------->\n"
+    result_tab = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
 
     print(str_line, file=file)
     print("PHYSICAL INPUTS\n", file=file)
@@ -124,53 +137,105 @@ def print_results(file = None):
     print(str_line, file=file)
 
     print("PHYSICAL PARAMETERS\n", file=file)
-    print("\tplasma wave length = \t\t" + str(lambda_p_e) + " m", file=file)
-    print(f"\tplasma frequency = \t\t\t{om_p_e} s-1 = {convert_rad_to_hz(om_p_e)} Hz", file=file)
-    print(f"\tion frequency = \t\t\t{om_p_i} s-1 = {convert_rad_to_hz(om_p_i)} Hz", file=file)
-    print(f"\tplasma wave period = \t\t{1/convert_rad_to_hz(om_p_e)} s", file=file)
-    print(f"\tion wave period = \t\t\t{1/convert_rad_to_hz(om_p_i)} s", file=file)
-    print("\tion skin depth = \t\t\t" + str(ion_skin_i) + " m", file=file)
-    print("\telectron skin depth = \t\t" + str(ion_skin_e) + " m", file=file)
+    print("\tdebye length = \t\t\t\t\t" + str(debye_len) + " m", file=file)
+    print("\tplasma wave length = \t\t\t" + str(lambda_p_e) + " m", file=file)
 
 
-    print(f"\tion thermal velocity: \t\t{ion.get_thermal_velocity()} m/s", file=file)
-    print(f"\telectron thermal velocity: \t{electron.get_thermal_velocity()} m/s", file=file)
-    print(f"\tbeam velocity = \t\t\t{beam_velocity} m/s", file=file)
+    print(f"\n\telectron plasma frequency = \t{om_p_e} s-1 = {convert_rad_to_hz(om_p_e)} Hz", file=file)
+    print(f"\telectron plasma wave period = \t{1/convert_rad_to_hz(om_p_e)} s", file=file)
+    print("\telectron skin depth = \t\t\t" + str(ion_skin_e) + " m", file=file)
+    print("\telectron temperature = \t\t\t" + str(electron.get_temp_in_kelvin()) + " K", file=file)
+
+    print(f"\n\tion plasma frequency = \t\t\t{om_p_i} s-1 = {convert_rad_to_hz(om_p_i)} Hz", file=file)
+    print(f"\tion plasma wave period = \t\t{1/convert_rad_to_hz(om_p_i)} s", file=file)
+    print("\tion skin depth = \t\t\t\t" + str(ion_skin_i) + " m", file=file)
+    print("\tion temperature = \t\t\t" + str(ion.get_temp_in_kelvin()) + " K", file=file)
+
+    print(f"\tion thermal velocity: \t\t\t{ion.get_thermal_velocity()} m/s", file=file)
+    print(f"\telectron thermal velocity: \t\t{electron.get_thermal_velocity()} m/s", file=file)
+    print(f"\tbeam velocity = \t\t\t\t{beam_velocity} m/s", file=file)
+
+    print("\nStability condition", file=file)
+    print("\tc*dT <= dx", file=file)
+    print(f"\t {const_c * sim_time_step} <= {sim_cell_length}", file=file)
+    if const_c * sim_time_step <= sim_cell_length:
+        print(f"{result_tab} Condition OK", file=file)
+    else:
+        print(f"{result_tab} Condition NOT OK !!!!", file=file)
+
+    print("\n\tc = isk * om_i", file=file)
+    print(f"\t {const_c} <= {ion_skin_i * om_p_i}", file=file)
+    if const_c <= ion_skin_i * om_p_i:
+        print(f"{result_tab} Condition OK", file=file)
+    else:
+        print(f"{result_tab} Condition NOT OK !!!!", file=file)
+
+    print(f"duration of simulation: {c1.time_sim_to_SI(dt) * num_cycles * 1000} ms", file=file)
+
     print(str_line, file=file)
 
+
+
+
+
+
+
     print("SIMULATION PARAMETERS\n", file=file)
-    print("\tmax time step: " + str(c1.convert_time_SI_to_sim(max_time_step * 0.1)), file=file)
-    print("\tmax cell size: " + str(c1.convert_length_SI_to_sim(lambda_p_e) * 0.1), file=file)
-    print("\tfor length: " + str(len_x) + " it is a least " + str(len_x/(c1.convert_length_SI_to_sim(lambda_p_e) * 0.1)) + " cells", file=file)
+    print("\tmax time step: " + str(dx), file=file)
+    print("\tmax cell size: " + str(c1.length_SI_to_sim(debye_len/1.5)), file=file)
+    print("\tfor length: L = " + str(len_x) + " it is at least nc = " + str(round(len_x/(c1.length_SI_to_sim(debye_len/1.5)))) + " cells", file=file)
+
+    print("\nNumerical condition", file=file)
+    print("\tdT <= L/N", file=file)
+    print(f"\t {dt} <= {dx}", file=file)
+
+    if dt <= dx:
+        print(f"{result_tab} Condition OK", file=file)
+    else:
+        print(f"{result_tab} Condition NOT OK !!!!", file=file)
+
+    print(f"\nCheck light velocity, c/om_pi = {c1.velocity_SI_to_sim(const_c)}", file=file)
+    # print(f"{const_c / om_p_i}  ----  {om_p_i}", file=file)
+    # print(f"{const_c / c1.vel_const} ---- {c1.vel_const}", file=file)
 
 
-    dx = len_x/nx
 
     print(f"\nx length: {len_x} isd = {ion_skin_i} m;  (isd = ion skin depth)", file=file)
     print(f"dt time: {1} if = {1/om_p_i} s;  (if = ion frequency)", file=file)
     print(f"\tin SIM: x length: {len_x} isd = {len_x*ion_skin_i} m", file=file)
-    print(f"\tin SIM: dt time: {dt} if = {(1 / om_p_i)*dt} s", file=file)
-    print(f"number of cells in x direction is {nx}", file=file)
-    print(f"\tin SIM: length step size: {(len_x*ion_skin_i)/nx} m", file=file)
-    print(f"simulation resolution is dx = {dx} (should be < 1)", file=file)
+    print(f"\tin SIM: dt time: {dt} if = {sim_time_step} s", file=file)
+
+    print(f"\nnumber of cells in x direction is {nx}", file=file)
+    print(f"\tin SIM: length step size: {sim_cell_length} m", file=file)
+    print(f"\tin SIM: length step size in Debye length: {debye_len/sim_cell_length} dl", file=file)
+
+    if debye_len/sim_cell_length >= 1.5:
+        print(f"{result_tab} Size step OK", file=file)
+    else:
+        print(f"{result_tab} Size step  too large !!!!", file=file)
+
+    print(f"\nsimulation resolution is dx = {dx} (should be < 1)", file=file)
     print(f"there should be {dx} < {ion_skin_e} < {ion_skin_i}", file=file)
+    print(f"\nlight length during 1 time step: {light_len} m, it travels through {light_len/sim_cell_length} cells", file=file)
+
 
 
     print("\nbackground proton parameters:", file=file)
-    print("\tthermal velocity: \t" + str(c1.convert_velocity_SI_to_sim(ion.get_thermal_velocity())), file=file)
-    print("\tdrift velocity: \t" + str(0) + " ???", file=file)
-    print("\tdensity: \t\t\t" + str(c1.convert_density_SI_to_sim(ion.get_concetration())), file=file)
+    print("\tthermal velocity: \t" + str(c1.velocity_SI_to_sim(ion.get_thermal_velocity())), file=file)
+    print("\tdrift velocity: \t" + str(0), file=file)
+    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(ion.get_concetration())), file=file)
 
     print("\nbackground electron parameters:", file=file)
-    print("\tthermal velocity: \t" + str(c1.convert_velocity_SI_to_sim(electron.get_thermal_velocity())), file=file)
-    print("\tdrift velocity: \t" + str(0) + " ???", file=file)
-    print("\tdensity: \t\t\t" + str(c1.convert_density_SI_to_sim(electron.get_concetration())), file=file)
+    print("\tthermal velocity: \t" + str(c1.velocity_SI_to_sim(electron.get_thermal_velocity())), file=file)
+    print("\tdrift velocity: \t" + str(0), file=file)
+    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(electron.get_concetration())), file=file)
 
     print("\nbeam electron parameters:", file=file)
-    print("\tthermal velocity: \t" + str(c1.convert_velocity_SI_to_sim(electron_beam.get_thermal_velocity())), file=file)
-    print("\tdrift velocity: \t" + str(0) + " ???", file=file)
-    print("\tdensity: \t\t\t" + str(c1.convert_density_SI_to_sim(electron_beam.get_concetration())), file=file)
-    print("\tinject velocity: \t" + str(c1.convert_velocity_SI_to_sim(electron_beam.get_thermal_velocity() * 5)), file=file)
+    print("\tthermal velocity: \t" + str(c1.velocity_SI_to_sim(electron_beam.get_thermal_velocity())), file=file)
+    print("\tdrift velocity: \t" + str(c1.velocity_SI_to_sim(beam_velocity)), file=file)
+    # print("\tdrift velocity: \t" + str(0) + " ???", file=file)
+    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(electron_beam.get_concetration())), file=file)
+
 
     print(str_line, file=file)
 
@@ -182,6 +247,8 @@ if __name__ == '__main__':
 
     # print(electron)
     # print(ion)
+    debye_len = get_debey_length(const_eps_0, const_K_b, electron.get_temp_in_kelvin(), n_e, const_e)
+    # debye_len = math.sqrt((const_eps_0 * const_K_b * electron.get_temp_in_kelvin())/(n_e**6 * const_e**2))
 
     om_p_e = electron.get_plasma_frequency()
     ion_skin_e = electron.get_ion_skin_depth()
@@ -207,6 +274,14 @@ if __name__ == '__main__':
     # uth = electron.get_thermal_velocity()
     # Ff = 4 * math.pi * (0.5/math.pi/uth**2)**(1.5) * u**2 * math.exp(-0.5*u**2/uth**2) * Ns * du
 
+    dx = len_x / nx
+    # sim_time_step = (1 / om_p_i) * dt
+    # sim_cell_length = (len_x * ion_skin_i) / nx
+    sim_time_step = c1.time_sim_to_SI(dt)
+    sim_cell_length = c1.length_sim_to_SI(len_x/nx)
+
+    light_len = const_c * sim_time_step
+
 
 
 
@@ -215,15 +290,20 @@ if __name__ == '__main__':
 
     print_results(None)
 
-    dt = 0.005
-    real_T = dt/om_p_i
+    # dt = 0.005
+    # real_T = dt/om_p_i
+    #
+    print(f"om_ip = {om_p_i}")
+    print(f"dt = {dt}")
+    period_p_i = 1/om_p_i
+    print(f"t_SI = {om_p_i}s  ->   t_sim = {c1.time_SI_to_sim(period_p_i)}")
+    print(f"t_sim = 1     ->      t_SI = {1/c1.time_sim_to_SI(1)}")
+    print(f"t_sim = {dt}     ->      t_SI = {c1.time_sim_to_SI(dt)}")
 
-    print(f"om_p_i = {om_p_i}")
-    print(f"om_p_i = {1/om_p_i} = 1 time unit")
-    print(f"real dT = {(1/om_p_i) * dt}")
-    print(f"dt_sim -> real : {dt * (1/om_p_i)} s")
-    print(f"t/om_i : {4163 / om_p_i}")
-
-    kk = (len_x / nx) * math.sqrt(64)
-    print(kk)
+    nn = n_e
+    mm = 1/nn
+    mm_sim = c1.length_SI_to_sim(mm)
+    print(f"\nn = {nn} m-1 -> m = 1/n = {mm} m")
+    print(f"convert m to SIM unit -> m_SIM = {mm_sim} isd")
+    print(f"value 1/m_SIM = {1/mm_sim} isd-1")
 

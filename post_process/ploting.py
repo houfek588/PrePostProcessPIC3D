@@ -149,7 +149,8 @@ def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: 
     ax = fig.add_subplot()
 
     # X, Y = np.meshgrid(dataX, dataY)
-    Z = np.array(dataZ)
+    # Z = np.array(dataZ)
+    Z = dataZ
     # ground = np.zeros_like(X)
 
     t = np.linspace(0, 2 * np.pi, 1024)
@@ -158,55 +159,32 @@ def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: 
     # fig, ax = plt.subplots()
     # plt.imshow(Z, aspect='auto', extent=(axis_x_SI[0], axis_x_SI[-1], axis_time_SIms[0], axis_time_SIms[-1]),
     #            cmap='viridis')
+    # im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
+    #            cmap='viridis', origin="lower", vmin=descr.y_min, vmax=descr.y_max)
     im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
-               cmap='viridis', origin="lower", vmin=descr.y_min, vmax=descr.y_max)
+                              cmap='viridis', origin="lower")
+    # im = ax.imshow((Z), extent=(-10, 10, -10, 10), cmap='viridis')
     ax.set_title(descr.title)
 
     fig.colorbar(im, ax=ax, label=descr.label_z)
 
+
+
+
+    # plt.subplot(1, 2, 2)
+    # plt.title("FFT Result (Frequency Domain)")
+    # # plt.imshow(np.log1p(magnitude), extent=(-10, 10, -10, 10), cmap='magma')
+    # plt.imshow((magnitude), extent=(-10, 10, -10, 10), cmap='magma')
+    # plt.colorbar(label="Log Magnitude")
+
+
+
+
+
+
     # nx, ny, nz = 8, 10, 5
     # data_xy = np.arange(ny * nx).reshape(ny, nx) + 15 * np.random.random((ny, nx))
 
-    # print(type(data_xy))
-    # print(data_xy[0])
-
-    # Plot a surface
-    # surf = ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
-    # surf = ax.plot_surface(X, Y, ground, facecolors=plt.cm.viridis((Z - Z.min()) / (Z.max() - Z.min())),
-    #                        rstride=1, cstride=1, shade=False)
-    # surf = ax.plot_surface(x_axis, time_scale, data_x_t, cmap='viridis')
-
-
-
-    # cmap = 'viridis'
-    # norm = None
-    # if norm is None:
-    #     norm = Normalize()
-    # colors = plt.get_cmap(cmap)(norm(Z))
-    # pos = 0
-    # # ny, nx = data_xy.shape
-    # # yi, xi = np.mgrid[0:ny + 1, 0:nx + 1]
-    # zi = np.full_like(X, pos)
-    #
-    # ax.plot_surface(X, Y, zi, rstride=1, cstride=1, facecolors=colors, shade=False)
-
-
-
-
-    # for i in range(0, len(dataY), 20):
-    #     # y = y_base + z * 0.1  # Optionally modify the curve (e.g., add offset)
-    #     ax.plot(dataX, ys=dataY[i], zs=dataZ, zdir='y', label=f'Curve at y={dataY[i]:.1f}')
-
-    # Add color bar
-    # fig.colorbar(surf, shrink=0.5, aspect=10)
-    # mappable = plt.cm.ScalarMappable(cmap='viridis')
-    # mappable.set_array(Z)
-    # fig.colorbar(mappable, shrink=0.5, aspect=10, label="Color Scale")
-
-    # Disable perspective by setting a large viewing distance
-    # ax.dist = 10  # The larger the value, the less perspective distortion
-    # plt.xlim(X.min(), X.max())
-    # plt.ylim(Y.min(), Y.max())
 
 
 

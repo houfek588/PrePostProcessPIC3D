@@ -1,55 +1,52 @@
 {
-  "folder": "../res_data_vth/beam_2pop_calm/",
-  "datafile": "1Dwaves_rhoe0_0.vtk",
+  "folder": "../res_data_vth/beam01_drftB/data/",
+  "sim_name": "1Dwaves",
+  "data_to_analyze": "E",
+  "data_type": "vtk",
   "axis": "x",
+  "output_folder": "../res_data_vth/beam01_drftB/",
+  "save_graphs": "True",
   "sim_parameters": {
-              "Lx": 1,
+              "Lx": 0.5,
               "Lz": 0.1,
               "nx": 4096,
-              "nz": 64,
-              "num_of_files": 10000,
+              "nz": 1,
+              "num_of_files": 7000,
               "step": 10,
-              "dt": 0.005
+              "dt": 0.0001
           },
   "visualization_parameters": {
          "plot_length": {
               "show": "True",
-              "save_to_file": "False",
-              "file_name": "outputs/plot_E_SI(x).png",
-              "time_parameter": 850,
+              "file_name": "fig1.png",
+              "time_parameter": -1,
               "enable_fft": "True"
           },
         "plot_time": {
               "show": "True",
-              "save_to_file": "False",
-              "file_name": "outputs/plot_E_SI(t).png",
-              "length_parameter": 1000,
+              "file_name": "fig2.png",
+              "length_parameter": 100,
               "enable_fft": "True"
           },
         "plot_3D": {
               "show": "False",
-              "save_to_file": "False",
-              "file_name": "../res_data/plot3D_E(x,t).png"
+              "file_name": "fig3.png"
           },
         "plot_wireframe": {
               "show": "False",
-              "save_to_file": "False",
-              "file_name": "outputs/plot_wire(x,t).png"
+              "file_name": "fig4.png"
           },
         "plot_2D": {
               "show": "True",
-              "save_to_file": "False",
-              "file_name": "outputs/plot2D(x,t).png"
+              "file_name": "fig5.png"
           },
         "plot_FFT_1D": {
               "show": "False",
-              "save_to_file": "False",
-              "file_name": "outputs/plot2D(x,t).png"
+              "file_name": "fig6.png"
           },
         "plot_FFT_2D": {
-              "show": "False",
-              "save_to_file": "False",
-              "file_name": "outputs/plot2D(x,t).png"
+              "show": "True",
+              "file_name": "fig7.png"
           }
   }
 }
