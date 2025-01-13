@@ -239,15 +239,19 @@ def print_results(file = None):
 
     print(str_line, file=file)
 
+
+electron = particles_parameters(const_e, T_e, const_M_e, n_e * 10 ** 6)
+electron_beam = particles_parameters(const_e, T_b, const_M_e, n_b * 10 ** 6)
+ion = particles_parameters(const_e, T_i, const_M_pr, n_i * 10 ** 6)
+debye_len = get_debey_length(const_eps_0, const_K_b, electron.get_temp_in_kelvin(), n_e, const_e)
+
 # print(f"name {__name__}")
 if __name__ == '__main__':
-    electron = particles_parameters(const_e, T_e, const_M_e, n_e * 10 ** 6)
-    electron_beam = particles_parameters(const_e, T_b, const_M_e, n_b * 10 ** 6)
-    ion = particles_parameters(const_e, T_i, const_M_pr, n_i * 10 ** 6)
+
 
     # print(electron)
     # print(ion)
-    debye_len = get_debey_length(const_eps_0, const_K_b, electron.get_temp_in_kelvin(), n_e, const_e)
+
     # debye_len = math.sqrt((const_eps_0 * const_K_b * electron.get_temp_in_kelvin())/(n_e**6 * const_e**2))
 
     om_p_e = electron.get_plasma_frequency()

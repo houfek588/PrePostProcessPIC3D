@@ -203,5 +203,20 @@ def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: 
         plt.show()
 
 
+def plot_fft(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
+    aa = 50
+    step = dataX[aa] - dataX[aa - 1]
+
+    # Perform FFT
+    fft_result = np.fft.fft(dataY)
+    frequencies = np.fft.fftfreq(len(dataY), d=step)
+
+    # Get magnitude spectrum (optional)
+    magnitude = np.abs(fft_result)
+
+    # Generate plot
+    plot_data(frequencies[1:len(frequencies) // 2], magnitude[1:len(magnitude) // 2], descr, save_to_file,
+                      file_name)
+
 def plot_all_graphs():
     plt.show()

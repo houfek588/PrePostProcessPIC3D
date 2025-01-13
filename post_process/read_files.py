@@ -371,6 +371,7 @@ class ReadVTKFilesData:
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
 
+
 class ReadHDFFieldData(ReadVTKFilesData):
     def __init__(self, folder, file_for_graph, num_of_files, variable="E", axis="x"):
         """
@@ -414,12 +415,6 @@ class ReadHDFFieldData(ReadVTKFilesData):
             raise Exception("Match error")
             # return None, None  # Handle invalid input gracefully
 
-        # paths = []
-        # for i in range(0,n):
-        #     paths.append(folder + text_part + str(i) + "." + f[1])
-        #
-        # print(paths)
-        # return paths
         return [folder + text_part + str(i) + "." + type for i in range(0, num_of_files)]
 
     def read_field1D_len(self, hdf_files, var, cycle_key):
@@ -499,6 +494,10 @@ class ReadHDFFieldData(ReadVTKFilesData):
     # def get_file_paths(self):
     #     return self.file_paths
 
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
 
 class ReadHDFParticleData(ReadHDFFieldData):
 
@@ -554,6 +553,93 @@ class ReadHDFParticleData(ReadHDFFieldData):
         return super().get_field1D_time(length)
 
 
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
+class ReadHDFSettings:
+    def __init__(self,file_name):
+        self.file_name = file_name
+        self.file_data = {}
+        # self.load_file()
+
+    def load_file(self):
+        try:
+            self.file_data = []
+            with h5py.File(self.file_name, "r") as hdf:
+                # Validate the "collective" key
+                if "collective" not in hdf:
+                    raise KeyError(f"The key 'collective' is missing in the file {self.file_name}")
+
+                # Assign the data to the instance variable
+                for i in hdf["collective"].keys():
+                    print(f"i: {i}, type: {type(i)}")
+                    print(hdf["collective"][i][0])
+                    self.file_data.append(hdf["collective"][i][0])
+                    # self.file_data[i] = hdf["collective"][i][0]
+
+                print(f"File '{self.file_name}' loaded successfully.")
+        except FileNotFoundError:
+            raise FileNotFoundError(f"The file '{self.file_name}' was not found.")
+        except KeyError as e:
+            raise KeyError(f"Key error while loading file '{self.file_name}': {e}")
+        except Exception as e:
+            raise Exception(f"An error occurred while loading file '{self.file_name}': {e}")
+
+
+    def get_num_cells(self, direction="x"):
+        """
+            Retrieves the number of cells for a specified direction.
+
+            Args:
+                direction (str): The direction to retrieve ("x", "y", or "z"). Default is "x".
+
+            Returns:
+                int: The number of cells in the specified direction.
+
+            Raises:
+                ValueError: If the specified direction is not valid.
+            """
+        available = {"x", "y", "z"}
+
+        # Validate the direction input
+        if direction not in available:
+            raise ValueError(f"Invalid direction '{direction}'. Must be one of {available}.")
+
+        # Construct the key and return the value
+        cell_key = f"N{direction}c"
+
+        with h5py.File(self.file_name, "r") as hdf:
+            return hdf["collective"][cell_key][0]
+
+    def get_box_size(self, direction="x"):
+        """
+            Retrieves the number of cells for a specified direction.
+
+            Args:
+                direction (str): The direction to retrieve ("x", "y", or "z"). Default is "x".
+
+            Returns:
+                int: The number of cells in the specified direction.
+
+            Raises:
+                ValueError: If the specified direction is not valid.
+            """
+        available = {"x", "y", "z"}
+
+        # Validate the direction input
+        if direction not in available:
+            raise ValueError(f"Invalid direction '{direction}'. Must be one of {available}.")
+
+        # Construct the key and return the value
+        cell_key = f"L{direction}"
+
+        with h5py.File(self.file_name, "r") as hdf:
+            return hdf["collective"][cell_key][0]
+
+    def get_num_cycles(self):
+        with h5py.File(self.file_name, "r") as hdf:
+            return hdf["collective"]["Ncycles"][0]
 
 
 if __name__ == '__main__':
@@ -565,42 +651,32 @@ if __name__ == '__main__':
     paths = ["../../res_data_vth/beam01_drftB/data_hdf5/restart0.hdf",
              "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"]
 
-    # disc_data = {"fields": }
+
     # h_file = ReadHDFFieldData("../../res_data_vth/beam01_drftB/data_hdf5/", "restart1.hdf", 32, "E", "x")
+    # h_file = ReadHDFParticleData("../../res_data_vth/beam01_drftB/data_hdf5/", "restart0.hdf", 32, "species_0", "u")
 
-    h_file = ReadHDFParticleData("../../res_data_vth/beam01_drftB/data_hdf5/", "restart0.hdf", 32, "species_0", "u")
-
-    # Open the HDF5 file
-    # file_path = "example.h5"
-
-    # dat = []
-    # for p in paths:
-    #
-    #
-    #     with h5py.File(p, "r") as hdf:
-    #
-    #
-    #         res1 = read_field(hdf,"Ex","cycle_0")
-    #
-    #     dat.append(res1)
-    # res1 = h_file.read_field1D_len(paths, "Ex", "cycle_0")
-    # res1 = h_file.read_field_2D()
-    # print(f"celk len: {len(res1)}")
-    # print(res1[126:132])
 
     descr3D = ploting.PlotDescription(f"Time development through space for Ex", "length [db]",
                                       "time [1/Om_pi]",
                                       "Ex")
-    # descr3D.set_ylim(min_value(data_x_t), max_value(data_x_t))
-    x = h_file.get_len_data()
-    x_t = h_file.get_2D_data()
 
-    print(f"x len: {len(x)}")
-    print("2D lengths:")
-    print(f"time len: {len(x_t)}; x len: {len(x_t[0])}")
+    # x = h_file.get_len_data()
+    # x_t = h_file.get_2D_data()
+    #
+    # print(f"x len: {len(x)}")
+    # print("2D lengths:")
+    # print(f"time len: {len(x_t)}; x len: {len(x_t[0])}")
+    #
+    # # print(x[0])
+    # ploting.plot3Dplane_data(x, h_file.get_time_data(), x_t, descr3D, False, "vv")
 
-    # print(x[0])
-    ploting.plot3Dplane_data(x, h_file.get_time_data(), x_t, descr3D, False, "vv")
+    # ploting.plot_all_graphs()
 
-    ploting.plot_all_graphs()
+    set = ReadHDFSettings("../../res_data_vth/beam01_drftB/data_hdf5/settings.hdf")
+
+    dir1 = "x"
+    dir2 = "y"
+    print(f"number of cell in {dir1} direction: {set.get_num_cells(dir1)}")
+    print(f"number of cell in {dir2} direction: {set.get_box_size(dir2)}")
+    print(f"number of cycles: {set.get_num_cycles()}")
 
