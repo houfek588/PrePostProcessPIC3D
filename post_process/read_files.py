@@ -2,7 +2,9 @@ import pyvista as pv
 import re
 import numpy as np
 import unit_convert
+import h5py
 
+import ploting
 
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------
@@ -10,73 +12,15 @@ import unit_convert
 # ---------------------------------------------------------------------------------
 
 
-def get_lin_x_data(L,n):
-    axis = []
-    for i in range(0, n - 1):
-        axis.append(i * (L/n))
-
-    return axis
 
 
-# def update(frame):
-#     print(f"frame = {frame}")
-#     pd = meshes[frame].point_data[mesh.array_names[0]]
-#     y = pd[col * row: row * (col + 1) - 1]
-#     if PIC_data.is_vector():
-#         yx = []
-#         yy = []
-#         yz = []
-#         res = []
-#         for i in y:
-#             yx.append(i[0])
-#             yy.append(i[1])
-#             yz.append(i[2])
-#
-#             res.append(np.sqrt(np.pow(i[0],2) + np.pow(i[1],2) + np.pow(i[2],2)))
-#
-#         print(res)
-#         line.set_data(x, res)
-#     else:
-#         print(y)
-#         line.set_data(x, y)
-#     return line,
 
 
 def get_data_row(data, column, row):
     return data[column * row: row * (column + 1) - 1]
 
 
-def create_file_names(folder, file_for_graph, num_of_files, step):
-    """
-    Generates a list of file paths based on a given template and step size.
 
-    Args:
-        folder (str): The folder where the files are located.
-        file_for_graph (str): A sample file name with a numeric suffix and extension.
-        num_of_files (int): The total number of files to consider.
-        step (int): The step interval for file numbering.
-
-    Returns:
-        list: A list of file paths.
-    """
-    # Regular expression to extract the base name, number, and file extension
-    pattern = r"^(.*)_(\d+)\.(\w+)$"
-
-    match = re.match(pattern, file_for_graph)
-    if not match:
-        raise ValueError("The file name does not match the expected format: 'name_number.extension'")
-
-    base_name, _, file_extension = match.groups()
-    base_name_with_folder = f"{folder}{base_name}_"
-    file_extension = f".{file_extension}"
-
-    # Generate file paths using list comprehension
-    file_paths = [
-        f"{base_name_with_folder}{i}{file_extension}"
-        for i in range(0, num_of_files, step)
-    ]
-
-    return file_paths
 
 
 def read_data_name(file_path):
@@ -131,75 +75,13 @@ def read_file_time_dataset(file_paths, grid_x, grid_z):
     return [read_file_data(path, grid_x, grid_z) for path in file_paths]
 
 
-def get_point_through_time(data, n, vector, dim_val="x"):
-    """
-    Extracts a list of values through time for a specific point index.
-
-    Args:
-        data (list): A list of time-step data.
-        n (int): The point index to extract data for.
-        vector (bool): Indicates whether the data is a vector (True) or scalar (False).
-        dim_val (str): The dimension to extract ("x", "y", "z") if vector is True.
-
-    Returns:
-        list: A list of float values extracted across time for the given point index.
-    """
-    if not vector:
-        # Scalar data extraction
-        return [float(d[n]) for d in data]
-
-    # Map dim_val to the appropriate index
-    dim_map = {"x": 0, "y": 1, "z": 2}
-    dim_idx = dim_map.get(dim_val, 0)  # Default to 0 if dim_val is invalid
-
-    # Vector data extraction
-    return [float(d[n][dim_idx]) for d in data]
 
 
-def get_point_through_len(data, t, vector, dim_val="x"):
-    """
-    Extracts a list of values based on whether the input data is a scalar or a vector.
-
-    Args:
-        data (list): A list of data points.
-        t (int): The index of the time step.
-        vector (bool): Indicates whether the data is a vector (True) or scalar (False).
-        dim_val (str): The dimension to extract ("x", "y", "z") if vector is True.
-
-    Returns:
-        list: A list of float values extracted based on the input parameters.
-    """
-    if not vector:
-        # Use list comprehension for efficiency and readability
-        return [float(d) for d in data[t]]
-
-    # Map dim_val to the appropriate index
-    dim_map = {"x": 0, "y": 1, "z": 2}
-    dim_idx = dim_map.get(dim_val, 0)  # Default to 0 if dim_val is invalid
-
-    # Extract the specified dimension using list comprehension
-    return [float(d[dim_idx]) for d in data[t]]
 
 
-def get_xz_data_vector(data, time_range, dim_val="x"):
-    """
-    Extracts a vector of data over a specified time range for a given dimension.
 
-    Args:
-        data (list): The input data containing vectors over time.
-        time_range (list): A list of time indices to extract data for.
-        dim_val (str): The dimension to extract ("x", "y", or "z"). Default is "x".
 
-    Returns:
-        list: A list of vectors for the specified dimension across the given time range.
-    """
-    # Map dimension to index
-    dim_mapping = {"x": 0, "y": 1, "z": 2}
-    if dim_val not in dim_mapping:
-        raise ValueError(f"Invalid dimension value '{dim_val}'. Expected one of {list(dim_mapping.keys())}.")
 
-    # Extract data for the specified time range and dimension
-    return [get_point_through_len(data, i, True, dim_val) for i in range(0, len(time_range))]
 
 
 def max_value(inputlist):
@@ -215,8 +97,19 @@ def add_suffix(file_name, suffix):
     splited_name = file_name.split(".")
     return splited_name[0] + suffix + splited_name[1]
 
+
+def avg_2n2_matrix(input_matrix):
+    total_sum = sum(sum(row) for row in input_matrix)  # Sum all elements
+    total_count = sum(len(row) for row in input_matrix)  # Count all elements
+    return total_sum / total_count if total_count > 0 else 0  # Avoid division by zero
+
+def get_vector_variables():
+    return ["E", "B"]
+
+
+
 class ReadVTKFilesData:
-    def __init__(self, folder, file_for_graph, num_of_files, step, dt, nx, nz):
+    def __init__(self, folder, file_for_graph, num_of_files, step, dt, nx, nz, var):
         """
                 Initializes the ReadFilesData class.
 
@@ -229,21 +122,88 @@ class ReadVTKFilesData:
                     nx (int): Number of points in the x-direction.
                     nz (int): Number of points in the z-direction.
                 """
-        self.file_paths = create_file_names(folder, file_for_graph, num_of_files, step)
+        self.file_paths = self.create_file_names(folder, file_for_graph, num_of_files, step)
         self.num_of_files = num_of_files
         self.step = step
         self.dt = dt
+        self.variable = var
 
         self.data_x_t = read_file_time_dataset(self.file_paths, nx, nz)
         self.data2D_x = None
         self.data2D_y = None
         self.data2D_z = None
+
+        self.len_data = None
+        self.time_data = None
         print("All files loaded...")
 
     def is_vector(self):
         """Checks if the data is vector data."""
+        if self.variable in get_vector_variables():
+            return True
+        return False
         # return isinstance(self.data_x_t[0][0], (list, tuple))
-        return not isinstance(self.data_x_t[0][0], np.floating)
+        # return not isinstance(self.data_x_t[0][0], np.floating)
+
+    def create_file_names(self, folder, file_for_graph, num_of_files, step):
+        """
+        Generates a list of file paths based on a given template and step size.
+
+        Args:
+            folder (str): The folder where the files are located.
+            file_for_graph (str): A sample file name with a numeric suffix and extension.
+            num_of_files (int): The total number of files to consider.
+            step (int): The step interval for file numbering.
+
+        Returns:
+            list: A list of file paths.
+        """
+        # Regular expression to extract the base name, number, and file extension
+        pattern = r"^(.*)_(\d+)\.(\w+)$"
+
+        match = re.match(pattern, file_for_graph)
+        if not match:
+            raise ValueError("The file name does not match the expected format: 'name_number.extension'")
+
+        base_name, _, file_extension = match.groups()
+        base_name_with_folder = f"{folder}{base_name}_"
+        file_extension = f".{file_extension}"
+
+        # Generate file paths using list comprehension
+        file_paths = [
+            f"{base_name_with_folder}{i}{file_extension}"
+            for i in range(0, num_of_files, step)
+        ]
+
+        return file_paths
+
+    def read_file_data(self, file_path, grid_x, grid_z):
+        """
+        Reads a file, extracts mesh data, and retrieves specific rows of data.
+
+        Args:
+            file_path (str): Path to the file to be read.
+            grid_x (int): Number of grid points along the x-axis.
+            grid_z (int): Number of grid points along the z-axis.
+
+        Returns:
+            list or np.array: The extracted data for the specified row.
+        """
+        try:
+            # Read the file using PyVista
+            mesh = pv.read(file_path)
+
+            # Get the point data from the first available array
+            data = mesh.point_data[mesh.array_names[0]]
+
+            # Extract the middle row of the grid based on z and x dimensions
+            return get_data_row(data, int(grid_z / 2), int(grid_x))
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File not found: {file_path}")
+        except KeyError as e:
+            raise KeyError(f"Data array not found in file: {file_path}. Error: {e}")
+        except Exception as e:
+            raise RuntimeError(f"An error occurred while reading the file: {file_path}. Error: {e}")
 
     def preprocess_2D_data(self,  vector_component="x"):
         """
@@ -312,55 +272,13 @@ class ReadVTKFilesData:
         # Use a nested list comprehension to extract the specified vector component
         # return [[float(d[dim_idx]) for d in time_step] for time_step in self.data_x_t]
         # if self.is_vector():
-    #         """
-    #             Extracts a vector of data over a specified time range for a given dimension.
-    #
-    #             Args:
-    #                 data (list): The input data containing vectors over time.
-    #                 time_range (list): A list of time indices to extract data for.
-    #                 dim_val (str): The dimension to extract ("x", "y", or "z"). Default is "x".
-    #
-    #             Returns:
-    #                 list: A list of vectors for the specified dimension across the given time range.
-    #             """
-    #         # Map dimension to index
-    #         dim_mapping = {"x": 0, "y": 1, "z": 2}
-    #         if vector_component not in dim_mapping:
-    #             raise ValueError(f"Invalid dimension value '{vector_component}'. Expected one of {list(dim_mapping.keys())}.")
-    #
-    #         # Extract data for the specified time range and dimension
-    #         aaa = []
-    #         for i in range(0, len(self.get_time_data())):
-    #
-    #             if not self.is_vector():
-    #                 # Use list comprehension for efficiency and readability
-    #                 return [float(d) for d in self.data_x_t[i]]
-    #
-    #                 # Map dim_val to the appropriate index
-    #             dim_map = {"x": 0, "y": 1, "z": 2}
-    #             dim_idx = dim_map.get(vector_component, 0)  # Default to 0 if dim_val is invalid
-    #
-    #             # Extract the specified dimension using list comprehension
-    #             bbb = []
-    #             for d in self.data_x_t[i]:
-    #                 bbb.append(float(d[dim_idx]))
-    #             # return [float(d[dim_idx]) for d in data[t]]
-    #             rrr = bbb
-    #             # rrr = get_point_through_len(self.data_x_t, i, True, vector_component)
-    #             aaa.append(rrr)
-    #
-    #
-    #         return aaa
-    #     if self.is_vector():
-    #         return get_xz_data_vector(self.data_x_t, self.get_time_data(), vector_component)
-    #     else:
-    #         return self.data_x_t
+
 
     def get_data_name(self):
         """Gets the name of the data from the first file."""
         return read_data_name(self.file_paths[0])
 
-    def get_x_data(self, L):
+    def get_len_data(self, L):
         """
                 Generates the x-axis values based on the domain length.
 
@@ -370,9 +288,10 @@ class ReadVTKFilesData:
                 Returns:
                     list: x-axis values.
                 """
-        n = len(self.get_point_through_len(0)) + 1
-        return [i * (L / n) for i in range(n - 1)]
-
+        if self.len_data == None:
+            n = len(self.read_field1D_len(0)) + 1
+            self.len_data = [i * (L / n) for i in range(n - 1)]
+        return self.len_data
 
     def get_time_data(self):
         """
@@ -381,14 +300,17 @@ class ReadVTKFilesData:
                 Returns:
                     list: A rescaled list of time values.
                 """
-        cycles = list(range(0, self.num_of_files, self.step))
-        return unit_convert.rescale_list(cycles, self.dt)
+        if self.time_data == None:
+            cycles = list(range(0, self.num_of_files, self.step))
+            self.time_data = unit_convert.rescale_list(cycles, self.dt)
+
+        return self.time_data
 
     def get_file_paths(self):
         """Returns the list of file paths."""
         return self.file_paths
 
-    def get_point_through_len(self, t, dim_val="x"):
+    def read_field1D_len(self, t, dim_val="x"):
         """
         Extracts data for a specific time step across all points.
 
@@ -402,7 +324,7 @@ class ReadVTKFilesData:
         data = self.get_2D_data(dim_val)
         return [float(d) for d in data[t]]
 
-    def get_point_through_time(self, n, dim_val="x"):
+    def read_field1D_time(self, n, dim_val="x"):
         """
         Extracts data over time for a specific point.
 
@@ -415,7 +337,6 @@ class ReadVTKFilesData:
         """
         data = self.get_2D_data(dim_val)
         return [float(d[n]) for d in data]
-
 
     def print_mesh_data(self):
         mesh = pv.read(self.file_paths[0])
@@ -432,15 +353,12 @@ class ReadVTKFilesData:
         print("Data length: " + str(len(point_data)))
 
 
-    # def get_global_min(self):
-    #     return min(min(sublist) for sublist in self.get_2D_data())
-    #
-    # def get_global_max(self):
-    #     return max(max(sublist) for sublist in self.get_2D_data())
-
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 class ReadHDFFilesData(ReadVTKFilesData):
-    def __init__(self, folder, file_for_graph, num_of_files, step, dt, nx, nz):
+    def __init__(self, folder, file_for_graph, num_of_files, variable="E", axis="x"):
         """
                 Initializes the ReadFilesData class.
 
@@ -453,21 +371,191 @@ class ReadHDFFilesData(ReadVTKFilesData):
                     nx (int): Number of points in the x-direction.
                     nz (int): Number of points in the z-direction.
                 """
-        self.file_paths = create_file_names(folder, file_for_graph, num_of_files, step)
+        self.file_paths = self.create_file_names(folder, file_for_graph, num_of_files)
+        # self.file_paths = create_file_names(folder, file_for_graph, num_of_files, step)
         self.num_of_files = num_of_files
-        self.step = step
-        self.dt = dt
+        self.variable = variable
+        # self.step = step
+        # self.dt = dt
 
-        self.data_x_t = read_file_time_dataset(self.file_paths, nx, nz)
+
+        # self.data_x_t = read_file_time_dataset(self.file_paths, nx, nz)
         self.data2D_x = None
         self.data2D_y = None
         self.data2D_z = None
+
+        self.len_data = None
+        self.time_data = None
+
+        self.data_x_t = self.read_field_2D()
         print("All files loaded...")
 
+    def create_file_names(self, folder, file, n):
 
-    def read_hdf_file(self):
-        pass
+        # split input file name to parsing
+        split_names = file.split(".")
+        name = split_names[0]
+        type = split_names[1]
+        pattern = r"([a-zA-Z]+)(\d{1,3})$"  # Match letters followed by 1-3 digits
+        match = re.match(pattern, name)
 
+        # check if file name sets to parsing
+        if match:
+            text_part = match.group(1)
+            number_part = int(match.group(2))
+            # return text_part, number_part
+        else:
+            raise Exception("Match error")
+            # return None, None  # Handle invalid input gracefully
+
+        # paths = []
+        # for i in range(0,n):
+        #     paths.append(folder + text_part + str(i) + "." + f[1])
+        #
+        # print(paths)
+        # return paths
+        return [folder + text_part + str(i) + "." + type for i in range(0, n)]
+
+    def read_field1D_len(self, hdf_files, var, cycle_key):
+        var_data = []
+        for file_path in hdf_files:
+            # print(f"Processing file: {file_path}")
+            with h5py.File(file_path, "r") as hdf:
+                # Validate keys
+                if "fields" not in hdf or var not in hdf["fields"] or cycle_key not in hdf["fields"][var]:
+                    raise KeyError(f"Missing required keys in file {file_path}")
+
+                cycle_data = hdf["fields"][var][cycle_key]
+
+                # Process each dataset in the cycle
+                for c in cycle_data:
+                    var_data.append(avg_2n2_matrix(c))
+                var_data.pop(-1)
+
+
+        # check length data and create it
+        if self.len_data == None:
+            self.len_data = range(0, len(var_data))
+
+        return var_data,1
+
+    def read_field_2D(self):
+        # keys = []
+        with h5py.File(self.file_paths[0], "r") as hdf:
+            # for k in hdf["fields"]["Ex"].keys():
+            #     keys.append(k)
+            keys = [k for k in hdf["fields"]["Ex"].keys()]
+
+
+        sort_cycle_name = sorted(keys, key=lambda x: parse_text_and_number(x)[1])
+
+        # check time data and create it
+        if self.time_data == None:
+            self.create_time_data(sort_cycle_name)
+
+        # return sorted data via time
+        return [self.read_field1D_len(self.file_paths, "Ex", c) for c in sort_cycle_name]
+
+    def read_field1D_time(self, length):
+        # time_data = []
+        # for t in self.data_x_t:
+        #     time_data.append(t[length])
+        # return time_data
+        return [float(t[length]) for t in self.data_x_t]
+
+    def create_time_data(self, sorted_cycles):
+
+        # print(sorted_cycles)
+        # numbers = []
+        # for i in sorted_cycles:
+        #     numbers.append(parse_text_and_number(i)[1])
+        #
+        # self.time_data = numbers
+        self.time_data = [parse_text_and_number(i)[1] for i in sorted_cycles]
+        print("time data created")
+
+    def get_time_data(self):
+        return self.time_data
+
+    def get_len_data(self):
+        return self.len_data
+
+    def get_2D_data(self, vector_component="x"):
+        return self.data_x_t
+
+    # def get_file_paths(self):
+    #     return self.file_paths
+
+def parse_text_and_number(input_string):
+    """
+    Parses a string into its text and numeric components.
+
+    Args:
+        input_string (str): The string to parse (e.g., "restart1").
+
+    Returns:
+        tuple: A tuple of the text and the number (e.g., ("restart", 1)).
+               Returns (None, None) if parsing fails.
+    """
+    # pattern = r"([a-zA-Z]+)(\d{1,3})$"  # Match letters followed by 1-3 digits
+    pattern = r"^(cycle)_(\d+)$"
+    match = re.match(pattern, input_string)
+
+    if match:
+        text_part = match.group(1)
+        number_part = int(match.group(2))
+
+        return text_part, number_part
+    else:
+        return None, None  # Handle invalid input gracefully
+
+# def sort_by_number(strings):
+#     """
+#     Sorts a list of strings based on the numeric part in each string.
+#
+#     Args:
+#         strings (list): A list of strings (e.g., ["restart10", "restart2"]).
+#
+#     Returns:
+#         list: The sorted list.
+#     """
+#     return sorted(strings, key=lambda x: parse_text_and_number(x)[1])
 
 if __name__ == '__main__':
-    file = ""
+    file_path = "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"
+
+    paths = ["../../res_data_vth/beam01_drftB/data_hdf5/restart0.hdf",
+             "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"]
+
+    # disc_data = {"fields": }
+    h_file = ReadHDFFilesData("../../res_data_vth/beam01_drftB/data_hdf5/", "restart1.hdf", 32, 10, 0.0001, 4096, 1)
+    # Open the HDF5 file
+    # file_path = "example.h5"
+
+    # dat = []
+    # for p in paths:
+    #
+    #
+    #     with h5py.File(p, "r") as hdf:
+    #
+    #
+    #         res1 = read_field(hdf,"Ex","cycle_0")
+    #
+    #     dat.append(res1)
+    # res1 = h_file.read_field1D_len(paths, "Ex", "cycle_0")
+    # res1 = h_file.read_field_2D()
+    # print(f"celk len: {len(res1)}")
+    # print(res1[126:132])
+
+    descr3D = ploting.PlotDescription(f"Time development through space for Ex", "length [db]",
+                                      "time [1/Om_pi]",
+                                      "Ex")
+    # descr3D.set_ylim(min_value(data_x_t), max_value(data_x_t))
+    x = h_file.get_len_data()
+    x_t = h_file.get_2D_data()
+    print(f"len: {len(x_t)}")
+    # print(x[0])
+    ploting.plot3Dplane_data(x, h_file.get_time_data(), h_file.get_2D_data(), descr3D, False, "vv")
+
+    ploting.plot_all_graphs()
+
