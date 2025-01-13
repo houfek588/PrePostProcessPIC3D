@@ -35,16 +35,18 @@ def result_analysis(proc_var):
     print("files to analyze: " + parameters["sim_name"] + "_" + variable_name + "_xxx." + parameters["data_type"])
 
     # create object with simulation data
-    PIC_data = ReadVTKFilesData(folder, file_for_graph, num_of_files, step, dt, nx, nz)
+    PIC_data = ReadVTKFilesData(folder, file_for_graph, num_of_files, step, dt, nx, nz, variable_name, axis)
     print(f" Is vector? {PIC_data.is_vector()}")
-    data_x_t = PIC_data.get_2D_data(axis)
-    print(data_x_t[0])
+    data_x_t = PIC_data.get_2D_data()
+    # print(data_x_t[0])
+    # print(f"time len: {len(data_x_t)}; x len: {len(data_x_t[0])}")
+
     if PIC_data.is_vector():
         data_name = PIC_data.get_data_name() + "_" + axis
     else:
         data_name = PIC_data.get_data_name()
     axis_time = PIC_data.get_time_data()
-    axis_x = PIC_data.get_x_data(Lx)
+    axis_x = PIC_data.get_len_data(Lx)
 
     axis_name = {
         "E": "Electric field []",
@@ -85,7 +87,10 @@ def result_analysis(proc_var):
         save_file_name = variable_name + "_" + parameters["visualization_parameters"]["plot_length"]["file_name"]
         enable_fft = bool(strtobool(parameters["visualization_parameters"]["plot_length"]["enable_fft"]))
 
-        val1 = PIC_data.get_point_through_len(x_level, axis)
+        # val1 = PIC_data.get_point_through_len(x_level, axis)
+        val1 = PIC_data.get_field1D_len(x_level)
+        print(f"val1 len: {len(val1)}")
+        print(f"axis_x_SI len: {len(axis_x_SI)}")
         # descr1 = ploting.PlotDescription(f"data {data_name} for time {axis_time[x_level]}", "length [isd]",
         #                              axis_name[PIC_data.get_data_name()])
         # ploting.plot_data(axis_x, val1, descr1, False, "plot_E(x)")
@@ -126,7 +131,8 @@ def result_analysis(proc_var):
         save_file_name = variable_name + "_" + parameters["visualization_parameters"]["plot_time"]["file_name"]
         enable_fft = bool(strtobool(parameters["visualization_parameters"]["plot_time"]["enable_fft"]))
 
-        val2 = PIC_data.get_point_through_time(t_level, axis)
+        # val2 = PIC_data.get_point_through_time(t_level, axis)
+        val2 = PIC_data.get_field1D_time(t_level)
         print(f"len val2: {len(val2)}")
         print(f"len x_axis: {len(axis_x)}")
 
@@ -296,9 +302,9 @@ if __name__ == '__main__':
     vars = ["E"]
 
     for v in vars:
-        # result_analysis(v)
-        try:
-            result_analysis(v)
-        except:
-            print(f"file not found for {v} variable")
+        result_analysis(v)
+        # try:
+        #     result_analysis(v)
+        # except:
+        #     print(f"file not found for {v} variable")
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

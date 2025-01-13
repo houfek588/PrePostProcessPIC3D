@@ -5,7 +5,7 @@
   "data_type": "vtk",
   "axis": "x",
   "output_folder": "../res_data_vth/beam01_drftB/",
-  "save_graphs": "True",
+  "save_graphs": "False",
   "sim_parameters": {
               "Lx": 0.5,
               "Lz": 0.1,
@@ -20,13 +20,13 @@
               "show": "True",
               "file_name": "fig1.png",
               "time_parameter": -1,
-              "enable_fft": "True"
+              "enable_fft": "False"
           },
         "plot_time": {
               "show": "True",
               "file_name": "fig2.png",
               "length_parameter": 100,
-              "enable_fft": "True"
+              "enable_fft": "False"
           },
         "plot_3D": {
               "show": "False",
@@ -45,7 +45,7 @@
               "file_name": "fig6.png"
           },
         "plot_FFT_2D": {
-              "show": "True",
+              "show": "False",
               "file_name": "fig7.png"
           }
   }
