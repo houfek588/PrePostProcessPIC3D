@@ -1,0 +1,33 @@
+{
+  "folder": "../res_data_vth/distr_types_02/data/",
+  "file": "proc0.hdf",
+  "output_folder": "../res_data_vth/distr_types_02/result/",
+  "num_of_files": 32,
+  "save_graphs": "True",
+  "field": {
+    "variable": "E",
+    "axis": "x"
+  },
+  "particle": {
+    "type": "electron",
+    "axis": "u"
+  },
+  "visualization_parameters": {
+         "plot_length": {
+              "show": "True",
+              "file_name": "hdf5_len.png",
+              "time_parameter": 0,
+              "enable_fft": "True"
+          },
+        "plot_time": {
+              "show": "True",
+              "file_name": "HDF5_time.png",
+              "length_parameter": 100,
+              "enable_fft": "False"
+          },
+        "plot_2D": {
+              "show": "True",
+              "file_name": "HDF5_2Dplane.png"
+          }
+  }
+}

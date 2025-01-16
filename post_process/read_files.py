@@ -3,68 +3,25 @@ import re
 import numpy as np
 import unit_convert
 import h5py
-
-
+import csv
 
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------
-
-
-
-
 
 
 def get_data_row(data, column, row):
     return data[column * row: row * (column + 1) - 1]
 
 
-
-
-
-# def read_data_name(file_path):
-#     mesh = pv.read(file_path)
-#     return mesh.point_data.keys()[0]
-
-
-# def read_file_data(file_path, grid_x, grid_z):
-#     """
-#     Reads a file, extracts mesh data, and retrieves specific rows of data.
-#
-#     Args:
-#         file_path (str): Path to the file to be read.
-#         grid_x (int): Number of grid points along the x-axis.
-#         grid_z (int): Number of grid points along the z-axis.
-#
-#     Returns:
-#         list or np.array: The extracted data for the specified row.
-#     """
-#     try:
-#         # Read the file using PyVista
-#         mesh = pv.read(file_path)
-#
-#         # Get the point data from the first available array
-#         data = mesh.point_data[mesh.array_names[0]]
-#
-#         # Extract the middle row of the grid based on z and x dimensions
-#         return get_data_row(data, int(grid_z / 2), int(grid_x))
-#     except FileNotFoundError:
-#         raise FileNotFoundError(f"File not found: {file_path}")
-#     except KeyError as e:
-#         raise KeyError(f"Data array not found in file: {file_path}. Error: {e}")
-#     except Exception as e:
-#         raise RuntimeError(f"An error occurred while reading the file: {file_path}. Error: {e}")
-
-
 def max_value(inputlist):
     return max(max(sublist) for sublist in inputlist)
-    # return max([sublist[-1] for sublist in inputlist])
 
 
 def min_value(inputlist):
     return min(min(sublist) for sublist in inputlist)
-    # return min([sublist[-1] for sublist in inputlist])
+
 
 def add_suffix(file_name, suffix):
     splited_name = file_name.split(".")
@@ -75,6 +32,7 @@ def avg_2n2_matrix(input_matrix):
     total_sum = sum(sum(row) for row in input_matrix)  # Sum all elements
     total_count = sum(len(row) for row in input_matrix)  # Count all elements
     return total_sum / total_count if total_count > 0 else 0  # Avoid division by zero
+
 
 def get_vector_variables():
     return ["E", "B"]
@@ -102,6 +60,7 @@ def parse_text_and_number(input_string):
         return text_part, number_part
     else:
         return None, None  # Handle invalid input gracefully
+
 
 class ReadVTKFilesData:
     def __init__(self, folder, file_for_graph, num_of_files, step, dt, nx, nz, variable="E", axis="x"):
@@ -331,8 +290,9 @@ class ReadVTKFilesData:
                     list: x-axis values.
                 """
         if self.len_data == None:
-            n = len(self.get_field1D_len(0)) + 1
-            self.len_data = [i * (L / n) for i in range(n - 1)]
+            n = len(self.get_field1D_len(0))
+            # self.len_data = [i * (L / n) for i in range(n - 1)]
+            self.len_data = range(0, n)
         return self.len_data
 
     def get_time_data(self):
@@ -388,6 +348,7 @@ class ReadHDFFieldData(ReadVTKFilesData):
                 """
         self.file_paths = self.create_file_names(folder, file_for_graph, num_of_files)
 
+        self.folder = folder
         self.num_of_files = num_of_files
         self.variable = variable
         self.axis = axis
@@ -491,6 +452,8 @@ class ReadHDFFieldData(ReadVTKFilesData):
     def get_2D_data(self):
         return self.data_x_t
 
+    def get_data_name(self):
+        return self.variable
     # def get_file_paths(self):
     #     return self.file_paths
 
@@ -514,7 +477,6 @@ class ReadHDFParticleData(ReadHDFFieldData):
 
         sort_cycle_name = sorted(keys, key=lambda x: parse_text_and_number(x)[1])
 
-        print(sort_cycle_name)
         # check time data and create it
         if self.time_data == None:
             self.create_time_data(sort_cycle_name)
@@ -539,10 +501,13 @@ class ReadHDFParticleData(ReadHDFFieldData):
                     var_data.append(c)
                 # var_data.pop(-1)
 
+        sett = ReadHDFSettings(self.folder + "settings.hdf")
+        part_in_cel = sett.get_num_part_in_cell(self.variable, self.axis)
 
         # check length data and create it
         if self.len_data == None:
-            self.len_data = range(0, len(var_data))
+            raw = range(0, len(var_data))
+            self.len_data = unit_convert.rescale_list(raw, 1/part_in_cel)
 
         return var_data
 
@@ -558,10 +523,17 @@ class ReadHDFParticleData(ReadHDFFieldData):
 # --------------------------------------------------------------------------------
 
 class ReadHDFSettings:
-    def __init__(self,file_name):
+    def __init__(self, file_name):
         self.file_name = file_name
         self.file_data = {}
         # self.load_file()
+        self.dict_dir = {"x": "x",
+                         "y": "y",
+                         "z": "z",
+                         "u": "x",
+                         "v": "y",
+                         "w": "z",
+                         "q": "x"}
 
     def load_file(self):
         try:
@@ -586,6 +558,16 @@ class ReadHDFSettings:
         except Exception as e:
             raise Exception(f"An error occurred while loading file '{self.file_name}': {e}")
 
+
+    def check_available_dir(self, direction):
+        # available = {"x", "y", "z", "u", "v", "w"}
+        available = list(self.dict_dir.keys())
+
+
+        # Validate the direction input
+        if direction not in available:
+            raise ValueError(f"Invalid direction '{direction}'. Must be one of {available}.")
+        return True
 
     def get_num_cells(self, direction="x"):
         """
@@ -625,31 +607,111 @@ class ReadHDFSettings:
             Raises:
                 ValueError: If the specified direction is not valid.
             """
-        available = {"x", "y", "z"}
+        # available = {"x", "y", "z"}
+        #
+        # # Validate the direction input
+        # if direction not in available:
+        #     raise ValueError(f"Invalid direction '{direction}'. Must be one of {available}.")
 
-        # Validate the direction input
-        if direction not in available:
-            raise ValueError(f"Invalid direction '{direction}'. Must be one of {available}.")
+        if self.check_available_dir(direction):
+            # Construct the key and return the value
+            cell_key = f"L{self.dict_dir[direction]}"
 
-        # Construct the key and return the value
-        cell_key = f"L{direction}"
-
-        with h5py.File(self.file_name, "r") as hdf:
-            return hdf["collective"][cell_key][0]
+            with h5py.File(self.file_name, "r") as hdf:
+                return hdf["collective"][cell_key][0]
 
     def get_num_cycles(self):
         with h5py.File(self.file_name, "r") as hdf:
             return hdf["collective"]["Ncycles"][0]
+
+    def get_num_part_in_cell(self, species, direction="x"):
+
+        if self.check_available_dir(direction):
+            cell_key = f"Npcel{self.dict_dir[direction]}"
+            # spec_key = f"species_{num_species}"
+
+
+            with h5py.File(self.file_name, "r") as hdf:
+                return hdf["collective"][species][cell_key][0]
+
+
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
+class ReadConsData:
+    def __init__(self, folder, file_for_graph):
+        path = folder + file_for_graph
+
+        self.data = {}
+        self.read_file(path)
+
+        # for k in self.data.keys():
+        #     print(k)
+        #     print(self.data.get(k)[0])
+        #     print(self.data.get(k)[1][0])
+
+    def read_file(self, file_path):
+        self.data = {
+            "cycle": ["Cycle", []],
+            "total_energy": ["", []],
+            "momentum": ["", []],
+            "e_energy": ["", []],
+            "b_energy": ["", []],
+            "k_energy": ["", []],
+            "k_energy_spec": ["", []],
+            "bulk_energy_spec": ["", []]
+        }
+        keys = [
+            "cycle",
+            None,  # Skip column 1
+            "total_energy",
+            "momentum",
+            "e_energy",
+            "b_energy",
+            "k_energy",
+            "k_energy_spec",
+            "bulk_energy_spec"
+        ]
+
+        with open(file_path, mode="r") as file:
+            reader = csv.reader(file, delimiter="\t")
+            for i, row in enumerate(reader):
+                if i == 0:  # Header row
+                    for key, value in zip(keys, range(0, len(row))):
+                        # print(f"key = {key}, value = {value}, row_val = {row[value]}")
+                        if key:
+                            if row[value]:
+                                self.data[key][0] = row[value+1]  # Assign header title
+                            else:
+                                self.data[key][0] = row[value]
+                                # self.data[key][0] = "Cycle"
+
+                            if key == "cycle":
+                                self.data[key][0] = "Cycle"
+                            elif key == "total_energy":
+                                self.data[key][0] = row[value + 1]
+                else:  # Data rows
+                    for idx, key in enumerate(keys):
+                        if key:
+                            self.data[key][1].append(float(row[idx]))  # Append data
+
+    def get_cycles(self):
+        return self.data["cycle"]
+
+    def get_e_energy(self):
+        return self.data["e_energy"]
+
 
 
 if __name__ == '__main__':
     import ploting
 
 
-    file_path = "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"
-
-    paths = ["../../res_data_vth/beam01_drftB/data_hdf5/restart0.hdf",
-             "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"]
+    # file_path = "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"
+    #
+    # paths = ["../../res_data_vth/beam01_drftB/data_hdf5/restart0.hdf",
+    #          "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"]
 
 
     # h_file = ReadHDFFieldData("../../res_data_vth/beam01_drftB/data_hdf5/", "restart1.hdf", 32, "E", "x")
@@ -672,11 +734,26 @@ if __name__ == '__main__':
 
     # ploting.plot_all_graphs()
 
-    set = ReadHDFSettings("../../res_data_vth/beam01_drftB/data_hdf5/settings.hdf")
+    # set = ReadHDFSettings("../../res_data_vth/beam01_drftB/data/settings.hdf")
+    #
+    # dir1 = "x"
+    # dir2 = "y"
+    # print(f"number of cell in {dir1} direction: {set.get_num_cells(dir1)}")
+    # print(f"number of cell in {dir2} direction: {set.get_box_size(dir2)}")
+    # print(f"number of cycles: {set.get_num_cycles()}")
+    #
+    # print(f"number of particles in cell: {set.get_num_part_in_cell(1)}")
 
-    dir1 = "x"
-    dir2 = "y"
-    print(f"number of cell in {dir1} direction: {set.get_num_cells(dir1)}")
-    print(f"number of cell in {dir2} direction: {set.get_box_size(dir2)}")
-    print(f"number of cycles: {set.get_num_cycles()}")
+    en = ReadConsData("../../res_data_vth/beam02/data/", "ConservedQuantities.txt")
 
+    # print(en.get_cycles()[0])
+    # print(en.get_cycles()[1])
+    #
+    # print(en.get_cycles()[0])
+    # print(en.get_e_energy()[1])
+
+    des = ploting.PlotDescription(f"Time development energy E", en.get_cycles()[0],
+                                      en.get_e_energy()[0])
+
+    ploting.plot_data(en.get_cycles()[1], en.get_e_energy()[1], des)
+    ploting.plot_all_graphs()

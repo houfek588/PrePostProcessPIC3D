@@ -12,11 +12,19 @@ class PlotDescription:
 
         self.y_max = 0
         self.y_min = 0
+        self.num_lines = 0
+        self.data_labels = []
 
     def set_ylim(self, minimum, maximum):
         self.y_max = maximum
         self.y_min = minimum
 
+    def set_num_graphs(self, num_lines):
+        self.num_lines = num_lines
+
+    def multidata_labels(self, labels):
+        for l in labels:
+            self.data_labels.append(l)
 
 
 
@@ -34,6 +42,7 @@ def plot_data(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, 
         for i in range(0 ,len(dataY)):
             plt.plot(dataX, dataY[i])
             # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
+        plt.legend()
     else:
         plt.plot(dataX, dataY)
         # plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
@@ -217,6 +226,54 @@ def plot_fft(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, f
     # Generate plot
     plot_data(frequencies[1:len(frequencies) // 2], magnitude[1:len(magnitude) // 2], descr, save_to_file,
                       file_name)
+
+
+def plot_histogram(dataX, levels, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
+    """
+    Plots nodal accelerations from acceleration data.
+
+    Args:
+        acceleration_data (dict): Acceleration results from OP2 file.
+    """
+    scale = 2
+    fig = plt.figure(figsize=(16/scale, 9/scale))
+
+    multiple_data = False
+    if len(dataX) < 5:
+        for i in range(0, len(dataX)):
+            data_label = descr.data_labels[i]
+            plt.hist(dataX[i], bins=levels, label=data_label)
+            # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
+        multiple_data = True
+    else:
+        plt.hist(dataX, bins=levels)
+        # plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
+    # plt.hist(dataX, bins=levels)
+
+    plt.xlabel(descr.label_x)
+    plt.ylabel(descr.label_y)
+    plt.title(descr.title)
+    plt.grid(True)
+
+    if multiple_data:
+        plt.legend()
+    # Show data points
+
+
+    if descr.y_max == 0 and descr.y_min == 0:
+        print("y limits dont used")
+        pass
+    else:
+        print(f"y limits ({descr.y_min}, {descr.y_max})")
+        plt.ylim(descr.y_min, descr.y_max)
+
+    if save_to_file:
+        # Save the plot to a file
+        plt.savefig(file_name, dpi=300) # Save as PNG file
+
+    if plot_immediately:
+        plt.show()
+
 
 def plot_all_graphs():
     plt.show()

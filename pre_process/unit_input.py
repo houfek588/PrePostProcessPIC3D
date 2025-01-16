@@ -54,7 +54,7 @@ def get_debey_length(eps_0, K_B, temp, n_e, q_e):
 
 # input from Solar wind
 # simulation
-len_x = 0.75
+len_x = 0.5
 nx = 4096
 dt = 0.0001
 num_cycles = 80000
@@ -68,8 +68,8 @@ T_i = 10    # eV
 T_e = T_i   # eV
 
 # beam
-n_b = 0.001 * n_i   # cm-3
-T_b = T_i   # eV
+n_b = 0.01 * n_e   # cm-3
+T_b = T_e * 0.3   # eV
 # v_b = 5*v_th
 
 class particles_parameters:
@@ -216,7 +216,11 @@ def print_results(file = None):
 
     print(f"\nsimulation resolution is dx = {dx} (should be < 1)", file=file)
     print(f"there should be {dx} < {ion_skin_e} < {ion_skin_i}", file=file)
-    print(f"\nlight length during 1 time step: {light_len} m, it travels through {light_len/sim_cell_length} cells", file=file)
+    print(f"light length during 1 time step: {light_len} m, it travels through {round(light_len/sim_cell_length,3)} cells < 1", file=file)
+    if light_len/sim_cell_length <= 1:
+        print(f"{result_tab} Condition OK", file=file)
+    else:
+        print(f"\n{result_tab} Condition NOT OK !!!!", file=file)
 
 
 
@@ -310,4 +314,14 @@ if __name__ == '__main__':
     print(f"\nn = {nn} m-1 -> m = 1/n = {mm} m")
     print(f"convert m to SIM unit -> m_SIM = {mm_sim} isd")
     print(f"value 1/m_SIM = {1/mm_sim} isd-1")
+
+    print("\nrecalc.")
+    N = 300000
+    T = N*dt
+    t_si = c1.time_sim_to_SI(T)
+    c2 = Converter(const_c, ion_skin_e, 1, om_p_e, const_e)
+    print(f"t = {N} cycles")
+    print(f"t = {T} 1/om_pi")
+    print(f"t = {t_si} s")
+    print(f"t = {c2.time_SI_to_sim(t_si)} 1/om_pe")
 
