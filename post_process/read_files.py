@@ -628,6 +628,10 @@ class ReadHDFSettings:
         with h5py.File(self.file_name, "r") as hdf:
             return hdf["collective"]["Ncycles"][0]
 
+    def get_num_species(self):
+        with h5py.File(self.file_name, "r") as hdf:
+            return hdf["collective"]["Ns"][0]
+
     def get_num_part_in_cell(self, species, direction="x"):
 
         if self.check_available_dir(direction):

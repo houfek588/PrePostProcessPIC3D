@@ -7,54 +7,63 @@ import pre_process.unit_input as unit
 from distutils.util import strtobool
 import numpy as np
 
-def result_analysis():
+def result_analysis(set_data):
     # path = "../res_data_vth/beam01_drftB/data_hdf5/"
     # file = "restart0.hdf"
     # number_files = 32
 
-    print("start hdf5 analysing...")
+    print(f"start hdf5 for {set_data} analysing...")
     with open("parameters_hdf5.json", "r") as file:
         parameters = json.load(file)
 
     # read parameters to variables
     folder = parameters["folder"]
-    # variable_name = parameters["data_to_analyze"]
-    # variable_name = proc_var
-    # file_for_graph = parameters["sim_name"] + "_" + variable_name + "_0." + parameters["data_type"]
+
     file = parameters["file"]
     number_files = parameters["num_of_files"]
 
-    field_par = parameters["field"]
-    particle_par = parameters["particle"]
-    setting = read.ReadHDFSettings(folder + "settings.hdf")
+    # field_par = parameters["field"]
+    # particle_par = parameters["particle"]
 
+    setting = read.ReadHDFSettings(folder + "settings.hdf")
+    ns = setting.get_num_species()
 
     # print(setting.get_num_cycles())
     # print(type(parameters))
 
-    # particle_dict = bidict({"electron": "species_0", "ion": "species_1"})
-    particle_dict = {"electron": "species_0",
-                     "ion": "species_1",
-                     "electron1": "species_2"}
-    # velocity_dict = {"x": "u",
-    #                  "y": "v",
-    #                  "u": "w",
-    #                  "q": "q"
-    #                  }
 
 
-    p_file = read.ReadHDFParticleData(folder, file, number_files, particle_dict[particle_par["type"]],
-                                      particle_par["axis"])
 
-    np.save(parameters["output_folder"] + particle_par["type"] + "_" + particle_par["axis"] + "_data2D.npy", p_file.data_x_t)
-    # function for create graphs
-    particle_graphs(p_file, parameters, setting)
+    particle_dict = create_particle_dict(ns)
+    print(particle_dict)
+    # Parsing the key
+    category, num, axis = set_data.split("_")  # Splits "velocity_1x" into ["velocity", "1", "x"]
+    print(f"cat and num: {category, num, axis}")
+
+    # Fetching the corresponding data
+    species, symbol = particle_dict[category][num][axis]
+    print(f"species: {species, symbol}")  # Output: species_0 u
+
+    p_file = read.ReadHDFParticleData(folder, file, number_files, species, symbol)
+    np.save("script_data/" + set_data + "_data2D.npy", p_file.data_x_t)
+
+
     # --------------------------------------------------------------------------------------------------
     # f_file = read.ReadHDFFieldData(folder, file, number_files, field_par["variable"], field_par["axis"])
     # field_graphs(f_file, parameters)
 
     # ploting.plot_all_graphs()
 
+
+def create_particle_dict(ns):
+    particle_dict = {"velocity": {}, "position": {}}
+
+    for i in range(1, ns + 1):
+        species = f"species_{i-1}"  # Adjust for zero-based index
+        particle_dict["velocity"][str(i)] = {"x": [species, "u"], "y": [species, "v"], "z": [species, "w"]}
+        particle_dict["position"][str(i)] = {"x": [species, "x"], "y": [species, "y"], "z": [species, "z"]}
+
+    return particle_dict
 
 def particle_graphs(data: read.ReadHDFParticleData, par, sett):
     axis_x_dict = get_axis_data(data, sett)[0]
