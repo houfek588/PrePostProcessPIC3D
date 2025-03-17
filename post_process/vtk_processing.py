@@ -51,6 +51,11 @@ def result_analysis(proc_var):
 
     # read data from loaded file
     print(f" Is vector? {PIC_data.is_vector()}")
+    if variable_name == "E":
+        PIC_data.rescale_data(unit.c1.e_field_const)
+        # data_x_t = unit_convert.rescale_list_of_lists(PIC_data.get_2D_data(),unit.c1.e_field_const)
+        print(f"data f(x,t) was rescaled by {unit.c1.e_field_const}")
+
     data_x_t = PIC_data.get_2D_data()
 
 
@@ -62,7 +67,7 @@ def result_analysis(proc_var):
     axis_x = PIC_data.get_len_data(Lx)
 
     axis_name = {
-        "E": "Electric field []",
+        "E": "Electric field [V/m]",
         "B": "Magnetic field []",
         "rhoe": "Electron density []",
         "rhoi": "Ion density []",
@@ -82,15 +87,14 @@ def result_analysis(proc_var):
     axis_x_DB = unit_convert.rescale_list(axis_x_SI, 1 / unit.debye_len)
     axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency())
 
-    print("--------------------------------")
-    print(f"last time: {axis_time[-1]} ")
-    print(f"last time: {axis_time_SI[-1]} s")
-    print(f"last time: {axis_time_OM[-1]} om_pe")
-    print("--------------------------------")
-    # print(f"time {4163 / ion.get_plasma_frequency()}")
-    # print(f"time step: {dt} -> {(1 / ion.get_plasma_frequency()) * dt} s")
-    # aa = 50
-    # print(f"data available for every: {axis_time_SI[aa] - axis_time_SI[aa - 1]} s")
+    # print(energy_data.get_e_energy()[1][-1])
+    energy_si = unit_convert.rescale_list(energy_data.get_e_energy()[1], unit.c1.energy_const)
+    print(f"data f(x,t) was rescaled by {unit.c1.energy_const}")
+    # print(energy_si[-1])
+
+    # print(energy_data.get_e_energy()[1][-1])
+    k_energy_si = unit_convert.rescale_list(energy_data.get_k_energy()[1], unit.c1.energy_const)
+    print(f"data f(x,t) was rescaled by {unit.c1.energy_const}")
 
     print("analysis completed")
     print("graph calculation...")
@@ -113,8 +117,8 @@ def result_analysis(proc_var):
 
         # plot data directly
         descr11 = ploting.PlotDescription(f"Length data {data_name} for t = {round(axis_time_SIms[x_level], 3)} ms",
-                                          "length [m]", axis_name[PIC_data.get_data_name()])
-        descr11.set_ylim(read.min_value(data_x_t) * 0.95, read.max_value(data_x_t) * 1.05)
+                                          "Length [m]", axis_name[PIC_data.get_data_name()])
+        # descr11.set_ylim(read.min_value(data_x_t) * 0.95, read.max_value(data_x_t) * 1.05)
         ploting.plot_data(axis_x_SI, val1, descr11, save, save_file_path + save_file_name)
 
         # plot data with FFT
@@ -157,7 +161,7 @@ def result_analysis(proc_var):
         # save = bool(strtobool(parameters["visualization_parameters"]["plot_3D"]["save_to_file"]))
         save_file_name = variable_name + "_" + parameters["visualization_parameters"]["plot_3D"]["file_name"]
 
-        descr3D = ploting.PlotDescription(f"Time development through space for {data_name}", "length [m]", "time [ms]",
+        descr3D = ploting.PlotDescription(f"Time development through space for {data_name}", "Length [m]", "Time [ms]",
                                           axis_name[PIC_data.get_data_name()])
         ploting.plot3D_data(axis_x_SI, axis_time_SIms, data_x_t, descr3D, save, save_file_path + save_file_name)
 
@@ -166,7 +170,7 @@ def result_analysis(proc_var):
         # save = bool(strtobool(parameters["visualization_parameters"]["plot_wireframe"]["save_to_file"]))
         save_file_name = variable_name + "_" + parameters["visualization_parameters"]["plot_wireframe"]["file_name"]
 
-        descr3D = ploting.PlotDescription(f"Time development through space for {data_name}", "length [m]", "time [s]",
+        descr3D = ploting.PlotDescription(f"Time development through space for {data_name}", "Length [m]", "Time [s]",
                                           axis_name[PIC_data.get_data_name()])
         ploting.plot3Dwire_data(axis_x_SI, axis_time_SI, data_x_t, descr3D, save, save_file_path + save_file_name)
 
@@ -175,8 +179,8 @@ def result_analysis(proc_var):
         # save = bool(strtobool(parameters["visualization_parameters"]["plot_2D"]["save_to_file"]))
         save_file_name = variable_name + "_" + parameters["visualization_parameters"]["plot_2D"]["file_name"]
 
-        descr3D = ploting.PlotDescription(f"Time development through space for {data_name}", "length [db]",
-                                          "time [1/Om_pi]",
+        descr3D = ploting.PlotDescription(f"Time development through space for {data_name}", "Length [db]",
+                                          r"$Time~~[1/\omega_{pi}]$",
                                           axis_name[PIC_data.get_data_name()])
         descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
         ploting.plot3Dplane_data(axis_x_DB, axis_time_OM, data_x_t, descr3D, save, save_file_path + save_file_name)
@@ -217,57 +221,106 @@ def result_analysis(proc_var):
         # save = bool(strtobool(parameters["visualization_parameters"]["plot_FFT_2D"]["save_to_file"]))
         save_file_name = parameters["visualization_parameters"]["plot_FFT_2D"]["file_name"]
 
-        # descr3D = ploting.PlotDescription(f"time development for {data_name}", "length [m]", "time [ms]",
-        #                               "el. field [ ]")
-        # ploting.plot3D_data(axis_x_SI, axis_time_SIms, data_x_t, descr3D, save, save_file_name)
-
-        # # length fft
-        # aa = 50
-        # step = axis_x_SI[aa] - axis_x_SI[aa - 1]
-        # fft_result = np.fft.fft(val1)
-        # frequencies = np.fft.fftfreq(len(val1), d=step)
-        #
-        # # time FFT
-        # aa = 50
-        # step = axis_time_SI[aa] - axis_time_SI[aa - 1]
-        # fft_result = np.fft.fft(val2)
-        # frequencies = np.fft.fftfreq(len(val2), d=step)
-
-
-
         # Create a 2D array (e.g., a Gaussian function as example data)
-        x = axis_x_SI
-        y = axis_time_SI
+        # x = axis_x
+        # y = axis_time
+        # x = axis_x_SI
+        # y = axis_time_SI
+        x = axis_x_DB
+        y = axis_time_OM
+        # x = unit_convert.rescale_list(axis_x, unit.debye_len)
+        # y = unit_convert.rescale_list(axis_time_SI, 1/unit.electron.get_plasma_frequency())
         X, Y = np.meshgrid(x, y)
         Z = np.array(data_x_t)  # Example 2D Gaussian
 
+        fft_results = read.fft_2d(Z, x, y)
+
+        # axis_x_DB, axis_time_OM
+
+        if fft_results:
+            E_fft_shifted, kx_shifted, ky_shifted = fft_results
+
+            print("PRINT FFT 2D")
+
+            # Plot the results
+            # plt.figure(figsize=(12, 6))
+
+            # plt.subplot(121)
+            # plt.imshow(np.abs(Z), extent=[x.min(), x.max(), y.min(), y.max()], origin='lower', aspect='auto')
+            # plt.imshow(np.abs(Z), extent=[min(x), max(x), min(y), max(y)], origin='lower', aspect='auto')
+            # plt.imshow(Z, extent=[min(x), max(x), min(y), max(y)], origin='lower', aspect='auto', cmap='viridis')
+            # plt.title(r"$Time~evolution~of~E_x$")
+            # plt.xlabel("Length [db]")
+            # plt.ylabel(r"$Time~~[1/\omega_{pe}]$")
+
+            descr3D = ploting.PlotDescription(r"$Time~evolution~of~E_x$", r"$Length~~[\lambda_{D}]$",
+                                              r"$Time~~[1/\omega_{pe}]$",
+                                              axis_name[PIC_data.get_data_name()])
+            # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
+            ploting.plot3Dplane_data(x, y, Z, descr3D, save, save_file_path + save_file_name)
+
+            # plt.subplot(122)
+            # plt.imshow(np.abs(E_fft_shifted),
+            #            extent=[kx_shifted.min(), kx_shifted.max(), ky_shifted.min(), ky_shifted.max()], origin='lower',
+            #            aspect='auto')
+            # plt.imshow(np.abs(E_fft_shifted),
+            #            extent=[0, max(kx_shifted), 0, max(ky_shifted)], origin='lower',
+            #            aspect='auto', cmap='viridis')
+            # plt.title(r"$FFT~2D~result~of~E_x$")
+            # plt.xlabel("Wavenumber [1/db]")
+            # plt.ylabel(r"$Frequency~~[\omega_{pe}]$")
+            # # fig.colorbar(im, ax=ax, label=descr.label_z)
+            # plt.tight_layout()
+            # plt.show()
+
+            descr3D = ploting.PlotDescription(r"$FFT~2D~result~of~E_x$", r"$Wavenumber~~[1/\lambda_{D}]$",
+                                              r"$Frequency~~[\omega_{pe}]$",
+                                              "Magnitude")
+            # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
+            ploting.plot3Dplane_data(kx_shifted, ky_shifted, np.abs(E_fft_shifted), descr3D, save,
+            save_file_path + "fft_" + save_file_name)
+            # :len(frequencies) // 2
+            # ploting.plot3Dplane_data(kx_shifted[:len(kx_shifted) // 2], ky_shifted[:len(ky_shifted) // 2],
+            #                          np.abs(E_fft_shifted[:len(kx_shifted) // 2, :len(ky_shifted) // 2]), descr3D, save,
+            #                          save_file_path + "fft_" + save_file_name)
+
+
+            # ploting.plot_data(kx_shifted, ky_shifted, descr3D)
+
+            # If you need the phase:
+            # phase = np.angle(E_fft_shifted)
+            # plt.figure()
+            # # plt.imshow(phase, extent=[kx_shifted.min(), kx_shifted.max(), ky_shifted.min(), ky_shifted.max()],
+            # #            origin='lower', aspect='auto')
+            # plt.imshow(phase, extent=[min(kx_shifted), max(kx_shifted), min(ky_shifted), max(ky_shifted)],
+            #            origin='lower', aspect='auto')
+            # plt.title("FFT (Phase)")
+            # plt.xlabel("kx")
+            # plt.ylabel("ky")
+            # plt.show()
+
         # Perform 2D FFT
-        fft_result = np.fft.fft2(Z)
-        fft_shifted = np.fft.fftshift(fft_result)  # Shift zero frequency to the center
-        magnitude = np.abs(fft_shifted)  # Magnitude of the FFT result
-
-        # fr = np.fft.
-
-        print("FFT 2D")
-        print(f"type: {type(fft_shifted)}, length: {len(fft_shifted)}")
-        print(f"type: {type(fft_shifted[0])}, length: {len(fft_shifted[0])}")
-        # print(f"type: {type(fft_shifted[0][0])}, length: {len(fft_shifted[0][0])}")
-
-
-        descr3D = ploting.PlotDescription(f"FFT 2D Result {data_name}", "Wavenumber [m-1]",
-                                          "Frequency (Hz)", "Magnitude")
-        descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
-        ploting.plot3Dplane_data(axis_x_DB, axis_time_OM, (magnitude), descr3D, save, save_file_path + save_file_name)
-
-        # # plt.subplot(1, 2, 2)
-        # plt.title("FFT Result (Frequency Domain)")
-        # # plt.imshow(np.log1p(magnitude), extent=(-10, 10, -10, 10), cmap='magma')
-        # plt.imshow((magnitude), extent=(-10, 10, -10, 10), cmap='viridis')
-        # plt.colorbar(label="Log Magnitude")
-        # plt.show()
+        # fft_result = np.fft.fft2(Z)
+        # fft_shifted = np.fft.fftshift(fft_result)  # Shift zero frequency to the center
+        # magnitude = np.abs(fft_shifted)  # Magnitude of the FFT result
+        #
+        # # fr = np.fft.
+        #
+        # print("FFT 2D")
+        # print(f"type: {type(fft_shifted)}, length: {len(fft_shifted)}")
+        # print(f"type: {type(fft_shifted[0])}, length: {len(fft_shifted[0])}")
+        # # print(f"type: {type(fft_shifted[0][0])}, length: {len(fft_shifted[0][0])}")
+        # # norm_om = unit_convert.rescale_list(axis_time_OM, 1/unit.electron.get_plasma_frequency())
+        #
+        # descr3D = ploting.PlotDescription(f"FFT 2D Result {data_name}", "Length [db]",
+        #                                   r"$Frequency~~[\omega_{pi}]$", "Magnitude")
+        # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
+        # ploting.plot3Dplane_data(axis_x_DB, axis_time_OM, magnitude, descr3D, save, save_file_path + save_file_name)
 
 
-    if True:
+
+
+    if False:
         # graph parameters for processing
         save_file_name = variable_name + "_" + parameters["visualization_parameters"]["plot_length"]["file_name"]
         enable_fft = bool(strtobool(parameters["visualization_parameters"]["plot_length"]["enable_fft"]))
@@ -275,13 +328,18 @@ def result_analysis(proc_var):
         # load data for graph
 
 
-        description = ploting.PlotDescription(f"Time development energy E", "time [1/om_pi]",
-                                      energy_data.get_e_energy()[0])
+        description = ploting.PlotDescription(f"Time development el. field energy E", r"$Time~~[1/\omega_{pi}]$",
+                                      energy_data.get_e_energy()[0] + " [J]")
 
         print(f"cycles: {axis_x[-1]} = {energy_data.get_cycles()[1][-1]}")
-        ploting.plot_data(axis_time_OM, energy_data.get_e_energy()[1], description,
-                          save, save_file_path + save_file_name)
-        ploting.plot_all_graphs()
+        ploting.plot_data(axis_time_OM, energy_si, description,
+                          save,  save_file_path + "field" + save_file_name)
+
+        description = ploting.PlotDescription(f"Time development kinetic energy E", r"$Time~~[1/\omega_{pi}]$",
+                                              energy_data.get_k_energy()[0] + " [J]")
+        ploting.plot_data(axis_time_OM, k_energy_si, description,
+                          save, save_file_path + "kin" + save_file_name)
+        # ploting.plot_all_graphs()
 
 
 

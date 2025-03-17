@@ -40,7 +40,7 @@ def plot_data(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, 
 
     if len(dataY) < 5:
         for i in range(0 ,len(dataY)):
-            plt.plot(dataX, dataY[i])
+            plt.plot(dataX, dataY[i], label=descr.data_labels[i])
             # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
         plt.legend()
     else:
@@ -172,29 +172,11 @@ def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: 
     #            cmap='viridis', origin="lower", vmin=descr.y_min, vmax=descr.y_max)
     im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
                               cmap='viridis', origin="lower")
-    # im = ax.imshow((Z), extent=(-10, 10, -10, 10), cmap='viridis')
+    # im = ax.imshow(Z, extent=[0, dataX[-1], 0, dataY[-1]], cmap='viridis', origin='lower',
+    #            aspect='auto')
     ax.set_title(descr.title)
 
     fig.colorbar(im, ax=ax, label=descr.label_z)
-
-
-
-
-    # plt.subplot(1, 2, 2)
-    # plt.title("FFT Result (Frequency Domain)")
-    # # plt.imshow(np.log1p(magnitude), extent=(-10, 10, -10, 10), cmap='magma')
-    # plt.imshow((magnitude), extent=(-10, 10, -10, 10), cmap='magma')
-    # plt.colorbar(label="Log Magnitude")
-
-
-
-
-
-
-    # nx, ny, nz = 8, 10, 5
-    # data_xy = np.arange(ny * nx).reshape(ny, nx) + 15 * np.random.random((ny, nx))
-
-
 
 
     # Add labels
@@ -277,3 +259,5 @@ def plot_histogram(dataX, levels, descr: PlotDescription, save_to_file: bool = F
 
 def plot_all_graphs():
     plt.show()
+
+

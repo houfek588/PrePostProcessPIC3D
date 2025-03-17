@@ -1,4 +1,5 @@
 import math
+import matplotlib.pyplot as plt
 
 # constants
 const_K_b = 1.380649*10**(-23)
@@ -9,6 +10,7 @@ const_eps_0 = 8.8541878128*10**(-12)
 const_c = 2.99792458*10**8
 const_M_e = const_M_pr/64
 # const_M_pr = 64*const_M_e
+
 
 class Converter:
     def __init__(self, vel_const, len_const, rho_const, time_const, charge_const):
@@ -39,6 +41,63 @@ class Converter:
     def length_sim_to_SI(self, len_SIM):
         return len_SIM * self.len_const
 
+
+class ConstBox:
+    def __init__(self):
+        self.vel_const = 0
+        self.len_const = 0
+        self.rho_const = 0
+        self.time_const = 0
+        self.charge_const = 0
+        self.mass_const = 0
+
+    def check_fill_const(self):
+        pass
+
+
+class ConverterExt(Converter):
+    def __init__(self, const_box: ConstBox):
+        super().__init__(const_box.vel_const, const_box.len_const, const_box.rho_const, const_box.time_const
+                         , const_box.charge_const)
+
+        self.mass_const = const_box.mass_const
+        self.energy_const = self.mass_const * self.vel_const**2
+        self.e_field_const = (self.mass_const * self.vel_const)/(self.charge_const * self.time_const)
+        self.b_field_const = self.mass_const/(self.charge_const*self.time_const)
+
+
+    def charge_SI_to_sim(self, charge_SI):
+        print(f"charge: {charge_SI} / {self.charge_const}")
+        return charge_SI / self.charge_const
+
+    def charge_sim_to_SI(self, charge_SIM):
+        return charge_SIM * self.charge_const
+
+    def mass_SI_to_sim(self, mass_SI):
+        return mass_SI / self.mass_const
+
+    def mass_sim_to_SI(self, mass_SIM):
+        return mass_SIM * self.mass_const
+
+    def energy_SI_to_sim(self, energy_SI):
+        return energy_SI / self.energy_const
+
+    def energy_sim_to_SI(self, energy_SIM):
+        return energy_SIM * self.energy_const
+
+    def e_field_SI_to_sim(self, e_field_SI):
+        return e_field_SI / self.e_field_const
+
+    def e_field_sim_to_SI(self, e_field_SIM):
+        return e_field_SIM * self.e_field_const
+
+    def b_field_SI_to_sim(self, b_field_SI):
+        return b_field_SI / self.b_field_const
+
+    def b_field_sim_to_SI(self, b_field_SIM):
+        return b_field_SIM * self.b_field_const
+
+
 def convert_ev_to_kelvin(inp):
     return inp * (const_e/const_K_b)
 
@@ -51,26 +110,6 @@ def convert_rad_to_hz(inp):
 def get_debey_length(eps_0, K_B, temp, n_e, q_e):
     return math.sqrt((eps_0 * K_B * temp)/(n_e**6 * q_e**2))
 
-
-# input from Solar wind
-# simulation
-len_x = 0.5
-nx = 4096
-dt = 0.0001
-num_cycles = 80000
-
-
-# background
-B = 10      # nT
-n_i = 10    # cm-3
-n_e = n_i   # cm-3
-T_i = 10    # eV
-T_e = T_i   # eV
-
-# beam
-n_b = 0.01 * n_e   # cm-3
-T_b = T_e * 0.3   # eV
-# v_b = 5*v_th
 
 class particles_parameters:
     def __init__(self, charge, temp, mass, conc):
@@ -118,6 +157,7 @@ class particles_parameters:
 
         return "------------"
 
+
 def print_results(file = None):
     str_line = "\n<--------------------------------------------------------------------------->\n"
     result_tab = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"
@@ -139,6 +179,7 @@ def print_results(file = None):
     print("PHYSICAL PARAMETERS\n", file=file)
     print("\tdebye length = \t\t\t\t\t" + str(debye_len) + " m", file=file)
     print("\tplasma wave length = \t\t\t" + str(lambda_p_e) + " m", file=file)
+    print(f"\tmagnetic field: \t\t\t\t{B*10**(-9)} T", file=file)
 
 
     print(f"\n\telectron plasma frequency = \t{om_p_e} s-1 = {convert_rad_to_hz(om_p_e)} Hz", file=file)
@@ -222,6 +263,8 @@ def print_results(file = None):
     else:
         print(f"\n{result_tab} Condition NOT OK !!!!", file=file)
 
+    print("Input magnetic field", file=file)
+    print(f"\tmag. field: {c1.b_field_SI_to_sim(B*10**(-9))}", file=file)
 
 
     print("\nbackground proton parameters:", file=file)
@@ -244,10 +287,43 @@ def print_results(file = None):
     print(str_line, file=file)
 
 
+# input from Solar wind
+# simulation
+len_x = 0.5
+nx = 4096
+dt = 0.0001
+num_cycles = 80000
+
+
+# background
+B = 10      # nT
+n_i = 10    # cm-3
+n_e = n_i   # cm-3
+T_i = 10    # eV
+T_e = T_i   # eV
+
+# beam
+n_b = 0.001 * n_e   # cm-3
+T_b = T_e * 0.3   # eV
+# v_b = 5*v_th
+
+
 electron = particles_parameters(const_e, T_e, const_M_e, n_e * 10 ** 6)
 electron_beam = particles_parameters(const_e, T_b, const_M_e, n_b * 10 ** 6)
 ion = particles_parameters(const_e, T_i, const_M_pr, n_i * 10 ** 6)
 debye_len = get_debey_length(const_eps_0, const_K_b, electron.get_temp_in_kelvin(), n_e, const_e)
+om_p_i = ion.get_plasma_frequency()
+ion_skin_i = ion.get_ion_skin_depth()
+
+const_box = ConstBox()
+const_box.vel_const = const_c
+const_box.len_const = ion_skin_i
+const_box.rho_const = 1
+const_box.time_const = om_p_i
+const_box.charge_const = const_e
+const_box.mass_const = const_M_pr
+
+c1 = ConverterExt(const_box)
 
 # print(f"name {__name__}")
 if __name__ == '__main__':
@@ -261,8 +337,7 @@ if __name__ == '__main__':
     om_p_e = electron.get_plasma_frequency()
     ion_skin_e = electron.get_ion_skin_depth()
 
-    om_p_i = ion.get_plasma_frequency()
-    ion_skin_i = ion.get_ion_skin_depth()
+
 
     beam_velocity = 5 * electron_beam.get_thermal_velocity()
     lambda_p_e = beam_velocity / convert_rad_to_hz(om_p_e)
@@ -272,7 +347,17 @@ if __name__ == '__main__':
     print(f"dt_e = {1 / convert_rad_to_hz(om_p_e)}")
     print(f"dt_i = {1 / convert_rad_to_hz(om_p_i)}")
     max_time_step = min([1 / convert_rad_to_hz(om_p_e), 1 / convert_rad_to_hz(om_p_i)])
-    c1 = Converter(const_c, ion_skin_i, 1, om_p_i, const_e)
+    # c1 = Converter(const_c, ion_skin_i, 1, om_p_i, const_e)
+
+    const_box = ConstBox()
+    const_box.vel_const = const_c
+    const_box.len_const = ion_skin_i
+    const_box.rho_const = 1
+    const_box.time_const = om_p_i
+    const_box.charge_const = const_e
+    const_box.mass_const = const_M_pr
+
+    c1 = ConverterExt(const_box)
 
     print(f"max_time_step = {max_time_step}")
     # So the distribution of the absolute value of velocity (u) should follow the Maxwellian:
@@ -301,20 +386,20 @@ if __name__ == '__main__':
     # dt = 0.005
     # real_T = dt/om_p_i
     #
-    print(f"om_ip = {om_p_i}")
-    print(f"dt = {dt}")
-    period_p_i = 1/om_p_i
-    print(f"t_SI = {om_p_i}s  ->   t_sim = {c1.time_SI_to_sim(period_p_i)}")
-    print(f"t_sim = 1     ->      t_SI = {1/c1.time_sim_to_SI(1)}")
-    print(f"t_sim = {dt}     ->      t_SI = {c1.time_sim_to_SI(dt)}")
-
-    nn = n_e
-    mm = 1/nn
-    mm_sim = c1.length_SI_to_sim(mm)
-    print(f"\nn = {nn} m-1 -> m = 1/n = {mm} m")
-    print(f"convert m to SIM unit -> m_SIM = {mm_sim} isd")
-    print(f"value 1/m_SIM = {1/mm_sim} isd-1")
-
+    # print(f"om_ip = {om_p_i}")
+    # print(f"dt = {dt}")
+    # period_p_i = 1/om_p_i
+    # print(f"t_SI = {om_p_i}s  ->   t_sim = {c1.time_SI_to_sim(period_p_i)}")
+    # print(f"t_sim = 1     ->      t_SI = {1/c1.time_sim_to_SI(1)}")
+    # print(f"t_sim = {dt}     ->      t_SI = {c1.time_sim_to_SI(dt)}")
+    #
+    # nn = n_e
+    # mm = 1/nn
+    # mm_sim = c1.length_SI_to_sim(mm)
+    # print(f"\nn = {nn} m-1 -> m = 1/n = {mm} m")
+    # print(f"convert m to SIM unit -> m_SIM = {mm_sim} isd")
+    # print(f"value 1/m_SIM = {1/mm_sim} isd-1")
+    #
     print("\nrecalc.")
     N = 300000
     T = N*dt
@@ -325,3 +410,123 @@ if __name__ == '__main__':
     print(f"t = {t_si} s")
     print(f"t = {c2.time_SI_to_sim(t_si)} 1/om_pe")
 
+    # convert Joule, Tesla and V/m to simulation units
+    # Ek = 0,5*m*v2
+    const_box = ConstBox()
+    const_box.vel_const = const_c
+    const_box.len_const = ion_skin_i
+    const_box.rho_const = 1
+    const_box.time_const = om_p_i
+    const_box.charge_const = const_e
+    const_box.mass_const = const_M_pr
+
+    c3 = ConverterExt(const_box)
+
+    # joule
+    m1 = const_M_pr
+    v1 = const_c
+    Ek = 0.5 * m1 * v1**2
+    print(f"\n\nEk = {Ek}")
+    v1s = c3.velocity_SI_to_sim(v1)
+    m2s = c3.mass_SI_to_sim(m1)
+    EkS = c3.energy_SI_to_sim(Ek)
+    Ek1s = 0.5*m2s*v1s**2
+    print(f"conv, mass: {m2s}, vel: {v1s}")
+    print(f"Ek1: {EkS}, Ek2: {Ek1s}")
+
+
+    print(f"\nconv back; E: {c3.energy_sim_to_SI(EkS)}, m: {c3.mass_sim_to_SI(m2s)}, v: {c3.velocity_sim_to_SI(v1s)}")
+
+    # V/m
+    m2 = const_M_pr
+    v2 = const_c
+    q2 = const_e
+    t2 = om_p_i
+    Efield = (m2*v2)/(q2*t2)
+
+    m2s = c3.mass_SI_to_sim(m2)
+    v2s = c3.velocity_SI_to_sim(v2)
+    q2s = c3.charge_SI_to_sim(q2)
+    t2s = c3.time_SI_to_sim(t2)
+    print(f"check; t = {c3.time_SI_to_sim(t_si)} 1/om_pe (t = {t_si}, c1: {c1.time_SI_to_sim(t_si)})")
+    Efields = (m2s * v2s) / (q2s * t2s)
+
+    print(f"el. field: {Efield} J")
+    print(f"el. field: {Efields}")
+    print(f"E test: {Efield * (const_e/(const_M_pr*const_c*om_p_i))}")
+    print(f"E test2: {c3.e_field_SI_to_sim(Efield)}")
+    print(f"E test back: {c3.e_field_sim_to_SI(c3.e_field_SI_to_sim(Efield))}")
+    print(f"E test back: {c3.e_field_sim_to_SI(1e-5)}")
+
+    print(f"\nconv back; q: {c3.charge_sim_to_SI(q2s)} =? {q2}, t: {c3.time_sim_to_SI(t2s)} =? {t2}")
+    print(f"\nTime const: c2: {c1.time_const}, c3: {c3.time_const}")
+
+    m3 = const_M_pr
+    v3 = const_c
+    q3 = const_e
+    t3 = om_p_i
+    Bfield = m3 / (q3 * t3)
+
+    m3s = c3.mass_SI_to_sim(m3)
+    v3s = c3.velocity_SI_to_sim(v3)
+    q3s = c3.charge_SI_to_sim(q3)
+    t3s = c3.time_SI_to_sim(t3)
+
+    Bfields = m3s / (q3s * t3s)
+
+    print(f"\n\nmag. field: {Bfield} T")
+    print(f"mag. field: {Bfields}")
+    print(f"B test: {Bfield * (const_e / (const_M_pr * om_p_i))}")
+    print(f"B test2: {c3.b_field_SI_to_sim(Bfield)}")
+    print(f"B test back: {c3.e_field_sim_to_SI(c3.b_field_SI_to_sim(Bfield))}")
+    print(f"B test back: {c3.b_field_SI_to_sim(B*10**(-9))}")
+
+    print(f"\nconv back; q: {c3.charge_sim_to_SI(q2s)} =? {q2}, t: {c3.time_sim_to_SI(t2s)} =? {t2}")
+    print(f"\nTime const: c2: {c1.time_const}, c3: {c3.time_const}")
+
+    print(c1.rho_const)
+
+
+    # damping
+    T_el = electron.get_temp_in_kelvin()
+    k = 1
+
+    om2 = (om_p_e**2) + 3*(k**2)*(const_K_b*T_el/const_M_e)
+
+    gama = -math.sqrt(math.pi/8)*(om_p_e/math.fabs(k*debye_len)**3)*math.exp((-1/(2*(k*debye_len)**2))-3/2)
+
+    o = []
+    kk = []
+    gam = []
+    for i in range(1, 100, 1):
+        k = (i * 0.01)/10.0
+        omm = (om_p_e**2) + 3*(k**2)*(const_K_b*T_el/const_M_e)
+
+        print(f"k*lamD = {k * debye_len}, k: {k}, lam: {debye_len}")
+        print(math.fabs(k * debye_len) ** 3)
+        gg = -math.sqrt(math.pi / 8) * (om_p_e / (math.fabs(k * debye_len) ** 3)) * math.exp(
+            (-1 / (2 * (k * debye_len) ** 2)) - 3 / 2)
+
+        o.append(math.sqrt(omm) / om_p_e)
+        kk.append(k * debye_len)
+        gam.append(-gg / om_p_e)
+
+    # d = plot.PlotDescription()
+    # d.multidata_labels(["om", "gama"])
+    # plot.plot_data(kk, [o,gam], d)
+    #
+    # plot.plot_all_graphs()
+    scale = 2
+    # fig, ax = plt.subplots(figsize=(16 / scale, 9 / scale))
+    plt.loglog(kk, o, label="y = x^2", color="blue")
+    plt.loglog(kk, gam,  label="y = x^1.5", color="orange")
+
+        # plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
+
+    # plt.xlabel(descr.label_x)
+    # plt.ylabel(descr.label_y)
+    # plt.title(descr.title)
+    plt.ylim(10**-4, 5)
+    plt.grid(True)
+    plt.legend()
+    plt.show()

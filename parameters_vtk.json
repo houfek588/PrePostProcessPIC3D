@@ -1,23 +1,23 @@
 {
-  "folder": "../res_data_vth/beam_02_long/data/",
+  "folder": "../res_data_vth/beam02/data/",
   "sim_name": "1Dwaves",
   "data_to_analyze": "E",
   "data_type": "vtk",
   "axis": "x",
-  "output_folder": "../res_data_vth/beam_02_long/result/",
+  "output_folder": "../res_data_vth/beam02/result/",
   "save_graphs": "True",
   "sim_parameters": {
               "Lx": 0.5,
               "Lz": 0.1,
               "nx": 4096,
               "nz": 1,
-              "num_of_files": 300000,
+              "num_of_files": 80000,
               "step": 10,
               "dt": 0.0001
           },
   "visualization_parameters": {
          "plot_length": {
-              "show": "True",
+              "show": "False",
               "file_name": "fig1.png",
               "time_parameter": -1,
               "enable_fft": "True"
@@ -26,7 +26,7 @@
               "show": "False",
               "file_name": "fig2.png",
               "length_parameter": 100,
-              "enable_fft": "False"
+              "enable_fft": "True"
           },
         "plot_3D": {
               "show": "False",
@@ -37,7 +37,7 @@
               "file_name": "fig4.png"
           },
         "plot_2D": {
-              "show": "True",
+              "show": "False",
               "file_name": "fig5.png"
           },
         "plot_FFT_1D": {

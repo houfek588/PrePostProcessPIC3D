@@ -28,8 +28,8 @@ if __name__ == '__main__':
         case "comp":
             hdf.compare_result()
         case _:
-            print("Non valid result type")
+            print(f"Non valid result type: {result_type}")
 
-    # ploting.plot_all_graphs()
+    ploting.plot_all_graphs()
 
     print("ANALYSING DONE")

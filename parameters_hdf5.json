@@ -1,7 +1,7 @@
 {
-  "folder": "../res_data_vth/distr_types_02/data/",
+  "folder": "../res_data_vth/beam03/data/",
   "file": "proc0.hdf",
-  "output_folder": "../res_data_vth/distr_types_02/result/",
+  "output_folder": "../res_data_vth/beam03/result/",
   "num_of_files": 32,
   "save_graphs": "True",
   "field": {

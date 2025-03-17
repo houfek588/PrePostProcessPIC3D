@@ -4,6 +4,7 @@ import numpy as np
 import unit_convert
 import h5py
 import csv
+import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------
@@ -311,6 +312,9 @@ class ReadVTKFilesData:
     def get_file_paths(self):
         """Returns the list of file paths."""
         return self.file_paths
+
+    def rescale_data(self, constant):
+        self.data_x_t = unit_convert.rescale_list_of_lists(self.data_x_t, constant)
 
     def __str__(self):
         mesh = pv.read(self.file_paths[0])
@@ -702,58 +706,115 @@ class ReadConsData:
     def get_e_energy(self):
         return self.data["e_energy"]
 
+    def get_k_energy(self):
+        return self.data["k_energy"]
+
+
+
+
+
+
+
+def fft_2d(E, X, Y):
+    """
+        Performs 2D Fast Fourier Transform on data E with corresponding x and y coordinates.
+
+        Args:
+            E: 2D numpy array representing the data.
+            X: 1D numpy array representing the x-axis coordinates.
+            Y: 1D numpy array representing the y-axis coordinates.
+
+        Returns:
+            A tuple containing:
+                - E_fft: 2D numpy array representing the FFT of E.
+                - kx: 1D numpy array representing the x-axis frequencies.
+                - ky: 1D numpy array representing the y-axis frequencies.
+            Returns None if input dimensions are incompatible.
+    """
+
+    Ny, Nx = E.shape
+    if Nx != len(X) or Ny != len(Y):
+        print("Error: Dimensions of E, X, and Y are incompatible.")
+        return None
+
+        # Perform 2D FFT
+    E_fft = np.fft.fft2(E)
+    E_fft_shifted = np.fft.fftshift(E_fft)  # Shift zero frequency to the center
+
+        # Calculate spatial frequencies
+    dx = np.abs(X[1] - X[0])  # Assuming uniform spacing
+    dy = np.abs(Y[1] - Y[0])
+
+    kx = np.fft.fftfreq(Nx, d=dx) * (2 * np.pi)
+    ky = np.fft.fftfreq(Ny, d=dy) * (2 * np.pi)
+    # kx = np.fft.fftfreq(Nx, d=dx)
+    # ky = np.fft.fftfreq(Ny, d=dy)
+
+    kx_shifted = np.fft.fftshift(kx)
+    ky_shifted = np.fft.fftshift(ky)
+
+    return E_fft_shifted, kx_shifted, ky_shifted
+
+    # Perform 2D FFT
+    # E_fft = np.fft.fft2(E)
+    #
+    # # Calculate spatial frequencies
+    # dx = np.abs(X[1] - X[0])  # Assuming uniform spacing
+    # dy = np.abs(Y[1] - Y[0])
+    #
+    # kx = np.fft.fftfreq(Nx, d=dx) * 2 * np.pi
+    # ky = np.fft.fftfreq(Ny, d=dy) * 2 * np.pi
+    #
+    # return E_fft, kx, ky
+
+
 
 
 if __name__ == '__main__':
-    import ploting
+    import numpy as np
+    import matplotlib.pyplot as plt
 
+    # Example usage:
+    # Create some sample data
+    Nx = 64
+    Ny = 32
+    x = np.linspace(-10, 10, Nx)  # Example x data in meters
+    y = np.linspace(0, 5, Ny)  # Example y data in seconds
+    X, Y = np.meshgrid(x, y)
+    E = np.exp(-(X ** 2 / 2) - ((Y - 2.5) ** 2 / 0.5))  # Example Gaussian moving in time
 
-    # file_path = "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"
-    #
-    # paths = ["../../res_data_vth/beam01_drftB/data_hdf5/restart0.hdf",
-    #          "../../res_data_vth/beam01_drftB/data_hdf5/restart1.hdf"]
+    # Perform FFT
+    fft_results = fft_2d(E, x, y)
 
+    if fft_results:
+        E_fft_shifted, kx_shifted, ky_shifted = fft_results
 
-    # h_file = ReadHDFFieldData("../../res_data_vth/beam01_drftB/data_hdf5/", "restart1.hdf", 32, "E", "x")
-    # h_file = ReadHDFParticleData("../../res_data_vth/beam01_drftB/data_hdf5/", "restart0.hdf", 32, "species_0", "u")
+        # Plot the results
+        plt.figure(figsize=(12, 6))
 
+        plt.subplot(121)
+        plt.imshow(np.abs(E), extent=[x.min(), x.max(), y.min(), y.max()], origin='lower', aspect='auto')
+        plt.title("Original Data")
+        plt.xlabel("x")
+        plt.ylabel("y")
 
-    descr3D = ploting.PlotDescription(f"Time development through space for Ex", "length [db]",
-                                      "time [1/Om_pi]",
-                                      "Ex")
+        plt.subplot(122)
+        plt.imshow(np.abs(E_fft_shifted),
+                   extent=[kx_shifted.min(), kx_shifted.max(), ky_shifted.min(), ky_shifted.max()], origin='lower',
+                   aspect='auto')
+        plt.title("FFT (Magnitude)")
+        plt.xlabel("kx")
+        plt.ylabel("ky")
 
-    # x = h_file.get_len_data()
-    # x_t = h_file.get_2D_data()
-    #
-    # print(f"x len: {len(x)}")
-    # print("2D lengths:")
-    # print(f"time len: {len(x_t)}; x len: {len(x_t[0])}")
-    #
-    # # print(x[0])
-    # ploting.plot3Dplane_data(x, h_file.get_time_data(), x_t, descr3D, False, "vv")
+        plt.tight_layout()
+        # plt.show()
 
-    # ploting.plot_all_graphs()
-
-    # set = ReadHDFSettings("../../res_data_vth/beam01_drftB/data/settings.hdf")
-    #
-    # dir1 = "x"
-    # dir2 = "y"
-    # print(f"number of cell in {dir1} direction: {set.get_num_cells(dir1)}")
-    # print(f"number of cell in {dir2} direction: {set.get_box_size(dir2)}")
-    # print(f"number of cycles: {set.get_num_cycles()}")
-    #
-    # print(f"number of particles in cell: {set.get_num_part_in_cell(1)}")
-
-    en = ReadConsData("../../res_data_vth/beam02/data/", "ConservedQuantities.txt")
-
-    # print(en.get_cycles()[0])
-    # print(en.get_cycles()[1])
-    #
-    # print(en.get_cycles()[0])
-    # print(en.get_e_energy()[1])
-
-    des = ploting.PlotDescription(f"Time development energy E", en.get_cycles()[0],
-                                      en.get_e_energy()[0])
-
-    ploting.plot_data(en.get_cycles()[1], en.get_e_energy()[1], des)
-    ploting.plot_all_graphs()
+        # If you need the phase:
+        phase = np.angle(E_fft_shifted)
+        plt.figure()
+        plt.imshow(phase, extent=[kx_shifted.min(), kx_shifted.max(), ky_shifted.min(), ky_shifted.max()],
+                   origin='lower', aspect='auto')
+        plt.title("FFT (Phase)")
+        plt.xlabel("kx")
+        plt.ylabel("ky")
+        plt.show()
