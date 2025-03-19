@@ -1,6 +1,7 @@
 import post_process.vtk_processing as vtk
 import post_process.hdf5_processing as hdf
 import post_process.ploting as ploting
+import post_process.data_processing as data
 import os
 
 def check_saved_data(var):
@@ -12,12 +13,14 @@ def check_saved_data(var):
 
         found = any(var in f for f in files)  # Check if any file contains vars[0]
 
-        print("Found" if found else "Not found")
-        hdf.result_analysis(var)
+        print("Founded" if found else "Not founded")
+        # vtk.result_analysis(var)
         if not found:
-
             try:
-                hdf.result_analysis(var)
+                try:
+                    vtk.result_analysis(var)
+                except:
+                    hdf.result_analysis(var)
                 print("Data loaded")
             except:
                 print(f"Data with name {var} not available")
@@ -25,7 +28,10 @@ def check_saved_data(var):
 
     else:
         print("The folder is empty.")
-        hdf.result_analysis(var)
+        try:
+            vtk.result_analysis(var)
+        except:
+            hdf.result_analysis(var)
         print("Data loaded")
 
 # Press the green button in the gutter to run the script.
@@ -48,18 +54,19 @@ if __name__ == '__main__':
     field_output_Ji = False
     par_output_velocity = True
 
-    vars = ["velocity_2_x"]
+    vars = ["velocity_2_x", "Efield_x", 'rho_e']
 
-    var = vars[0]
+    var = vars[1]
     check_saved_data(var)
 
+    data.result_analysis(var)
 
 
-    result_type = "hdf11"
+    # result_type = "hdf11"
 
     # vars = ["E", "B", "rhoe0", "rhoe2", "rhoi1", "rhoi3"]
     # vars = ["rhoe2", "rhoi3"]
-    vars = ["E"]
+    # vars = ["E"]
 
     # print("ANALYSING START")
     # match result_type:
@@ -80,7 +87,7 @@ if __name__ == '__main__':
     #     case _:
     #         print(f"Non valid result type: {result_type}")
     #
-    # ploting.plot_all_graphs()
+    ploting.plot_all_graphs()
 
     print("ANALYSING DONE")
 

@@ -45,8 +45,9 @@ def result_analysis(set_data):
     print(f"species: {species, symbol}")  # Output: species_0 u
 
     p_file = read.ReadHDFParticleData(folder, file, number_files, species, symbol)
+    new_file_name = "script_data/" + set_data + "_data2D.npy"
     np.save("script_data/" + set_data + "_data2D.npy", p_file.data_x_t)
-
+    print(f"new file created on {new_file_name}")
 
     # --------------------------------------------------------------------------------------------------
     # f_file = read.ReadHDFFieldData(folder, file, number_files, field_par["variable"], field_par["axis"])

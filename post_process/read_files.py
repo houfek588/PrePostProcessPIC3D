@@ -77,7 +77,12 @@ class ReadVTKFilesData:
                     nx (int): Number of points in the x-direction.
                     nz (int): Number of points in the z-direction.
                 """
-        self.file_paths = self.create_file_names(folder, file_for_graph, num_of_files, step)
+        # self.file_paths = self.create_file_names(folder, file_for_graph, num_of_files, step)
+        self.file_paths = []
+        for f in file_for_graph:
+            self.file_paths.append(folder + f)
+        # self.file_paths = folder + file_for_graph
+        # print(self.file_paths[100])
         self.num_of_files = num_of_files
         self.step = step
         self.dt = dt
@@ -642,6 +647,13 @@ class ReadHDFSettings:
             with h5py.File(self.file_name, "r") as hdf:
                 return hdf["collective"][species][cell_key][0]
 
+    def get_time_step_size(self):
+        with h5py.File(self.file_name, "r") as hdf:
+            return hdf["collective"]["Dt"][0]
+
+    def get_time_step_cycles(self):
+        with h5py.File(self.file_name, "r") as hdf:
+            return hdf["collective"]["Ncycles"][0]
 
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
