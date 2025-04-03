@@ -124,10 +124,11 @@ def plot3Dwire_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: b
     X, Y = np.meshgrid(dataX, dataY)
     Z = np.array(dataZ)
     # ground = np.zeros_like(X)
+    spacing = int(len(Z)/10)
 
     # Plot a surface
     # Give the first plot only wireframes of the type y = c
-    ax1.plot_wireframe(X, Y, Z, rstride=10, cstride=0)
+    ax1.plot_wireframe(X, Y, Z, rstride=spacing, cstride=0)
 
 
     # Give the second plot only wireframes of the type x = c
@@ -151,7 +152,7 @@ def plot3Dwire_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: b
         plt.show()
 
 from matplotlib.colors import Normalize
-def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
+def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png", max_bar_val=None):
     # Create a figure and 3D axes
     scale = 1.5
     fig = plt.figure(figsize=(16/scale, 9/scale))
@@ -171,12 +172,12 @@ def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: 
     # im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
     #            cmap='viridis', origin="lower", vmin=descr.y_min, vmax=descr.y_max)
     im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
-                              cmap='viridis', origin="lower")
+                              cmap='viridis', origin="lower", vmax=max_bar_val)
     # im = ax.imshow(Z, extent=[0, dataX[-1], 0, dataY[-1]], cmap='viridis', origin='lower',
     #            aspect='auto')
     ax.set_title(descr.title)
 
-    fig.colorbar(im, ax=ax, label=descr.label_z)
+    fig.colorbar(im, ax=ax, label=descr.label_z, use_gridspec=True)
 
 
     # Add labels
