@@ -54,13 +54,14 @@ if __name__ == '__main__':
     field_output_Ji = False
     par_output_velocity = True
 
-    vars = ["velocity_2_x", "Efield_x", 'rho_e']
+    vars = ["velocity_1_x", "velocity_2_x", "velocity_3_x", "Efield_x", 'rho_e']
 
-    var = vars[1]
+    var = vars[3]
+    print(f">> chosen data: {var}")
     check_saved_data(var)
 
-    data.result_analysis(var)
-
+    data.single_result_analysis(var)
+    # data.multi_result_analysis([vars[0], vars[1], vars[2]])
 
     # result_type = "hdf11"
 

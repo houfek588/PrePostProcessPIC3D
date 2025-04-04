@@ -12,14 +12,34 @@ import post_process.read_files as read
 
 # print(d[0][0])
 # print(a[0][0])
-g_axis_name = {
-    "Efield": "Electric field ",
-    "Bfield": "Magnetic field []",
-    "rhoe": "Electron density []",
-    "rhoi": "Ion density []",
-    "Je": "Electron current density []",
-    "Ji": "Ion current density []",
-}
+g_keys = ["Efield", "Bfield", "rhoe", "rhoi", "Je", "Ji", "velocity", "velocity_1", "velocity_2", "velocity_3"]
+g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density", "Electron current density",
+           "Ion current density", "Velocity", "Electron velocity", "Ion velocity", "El. beam velocity"]
+g_pic_units = ["om_i ", "??", "4pi", "4pi", "??", "??", "c", "c", "c", "c"]
+g_si_units = ["V/m ", "T", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s"]
+
+g_axis_name = {key: g_names[i] for i, key in enumerate(g_keys)}
+g_axis_si_units = {key: g_si_units[i] for i, key in enumerate(g_keys)}
+g_axis_pic_units = {key: g_pic_units[i] for i, key in enumerate(g_keys)}
+# g_axis_name = {
+#     "Efield": "Electric field ",
+#     "Bfield": "Magnetic field []",
+#     "rhoe": "Electron density []",
+#     "rhoi": "Ion density []",
+#     "Je": "Electron current density []",
+#     "Ji": "Ion current density []",
+#     "velocity": "Velocity"
+# }
+#
+# g_axis_units = {
+#     "Efield": "Electric field ",
+#     "Bfield": "Magnetic field []",
+#     "rhoe": "Electron density []",
+#     "rhoi": "Ion density []",
+#     "Je": "Electron current density []",
+#     "Ji": "Ion current density []",
+#     "velocity": "Velocity"
+# }
 
 class ReadNMPFileData:
     def __init__(self, set_data):
@@ -60,88 +80,39 @@ class ReadNMPFileData:
 
         return axis_x
 
-# def load_numpy_data(set_data):
-#     name_split = set_data.split("_")
-#     category = name_split[0] if name_split else ""
-#     axis = name_split[1] if len(name_split) > 1 else "x"
-#
-#     data_name = "script_data/" + set_data + "_data2D.npy"
-#     print(data_name)
-#     d = np.load(data_name)
-#     return d
 
-def result_analysis(set_data):
+def single_result_analysis(set_data):
 
-    print(f"Data for analysis: {set_data}")
+    print(f"Single data for analysis: {set_data}")
 
     numpy_data = ReadNMPFileData(set_data)
-    # data = numpy_data.get_data_x_t()
 
-    # print(f"len T: {len(data)}")
-    # print(f"len L:{len(data[0])}")
-    # print("Numpy data loaded")
-
-
-
-    # data_si = unit_convert.rescale_list_of_lists(data, unit.c1.e_field_const)
-    #
-    # x_level = -1
-    #
-    # axis_time = numpy_data.get_time_axis()
-    # print(f"axis_time: {axis_time}")
-    # print(f"axis_time[-1]/0.0001: {axis_time[-1]/0.0001}")
-    #
-    # axis_x = numpy_data.get_length_axis()
-    # axis_x_SI = unit_convert.rescale_list(axis_x, unit.ion.get_ion_skin_depth() * 0.5/4096)
-    #
-    # print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
-    # axis_time_SI = unit_convert.rescale_list(axis_time, 1 / unit.ion.get_plasma_frequency())
-    # axis_time_SIms = unit_convert.rescale_list(axis_time_SI, 1000)
-    #
-    # # debye_len = get_debey_length(const_eps_0, const_K_b, electron.get_temp_in_kelvin(), n_e, const_e)
-    # axis_x_DB = unit_convert.rescale_list(axis_x_SI, 1 / unit.debye_len)
-    # axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency())
-    #
-    # print(f"length DB max: {axis_x_DB[-1]}")
-    # print(f"time OM max: {axis_time_OM[-1]}")
-
-    # graph parameters for processing
-    # # x_level = -1
-    # save_file_name = set_data + "_" + "hdf5_len.png"
-    # val1 = data_si[x_level]
-    #
-    # y_axis_name = set_data.split("_")[0]
-
-
-
-    # graph_for_time_value(numpy_data, set_data, 1)
+    # function calls
+    # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
+    graph_for_pos_value(numpy_data, set_data, 1, "val")
     # graph_for_time_value(numpy_data, set_data, 1, True)
     # graph2d(numpy_data, set_data)
     # graph2d_fft_in_time(numpy_data, set_data)
-    graph_fft2d(numpy_data, set_data)
+    # graph_fft2d(numpy_data, set_data)
 
 
-        # plot data directly
-    # descr11 = ploting.PlotDescription(f"Length data {set_data} for t = {round(axis_time_SIms[x_level], 3)} ms",
-    #                                       "Length [m]", g_axis_name[y_axis_name])
-    #     # descr11.set_ylim(read.min_value(data_x_t) * 0.95, read.max_value(data_x_t) * 1.05)
-    # ploting.plot_data(axis_x_SI, val1, descr11, False, save_file_name)
-    #
-    #     # plot data with FFT
-    #     # if enable_fft:
-    # descr22 = ploting.PlotDescription(
-    #             f"Frequency Spectrum for {set_data}; t = {round(axis_time_SIms[x_level], 1)} ms",
-    #             "Wavenumber [m-1]",
-    #             "Magnitude")
-    # fft_file_name = read.add_suffix(save_file_name, "_fft.")
-    # ploting.plot_fft(axis_x_SI, val1, descr22, False, fft_file_name)
+def multi_result_analysis(set_data: list):
+    print(f"Multiple data for analysis: {set_data}")
 
-    # save = bool(strtobool(parameters["visualization_parameters"]["plot_2D"]["save_to_file"]))
-    # save_file_name = variable_name + "_" + parameters["visualization_parameters"]["plot_2D"]["file_name"]
+    numpy_data = [ReadNMPFileData(name) for name in set_data]
+    # for i
+    # numpy_data = ReadNMPFileData(set_data)
 
+    # graph_multi_time_value(numpy_data[0], set_data[0], 1, "hist", "pic")
+    graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic")
+    # function calls
+    # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
+    # graph_for_time_value(numpy_data, set_data, 1, True)
+    # graph2d(numpy_data, set_data)
+    # graph2d_fft_in_time(numpy_data, set_data)
+    # graph_fft2d(numpy_data, set_data)
 
-
-def graph_for_time_value(numpy_data, set_data, T, fft: bool = False, units="si"):
+def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si"):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
 
         Args:
@@ -172,16 +143,16 @@ def graph_for_time_value(numpy_data, set_data, T, fft: bool = False, units="si")
     length_data = numpy_data.get_length_axis()
 
     axis_x, label_x = convert_x_axis(length_data, units)
-    axis_z, label_z = convert_z_axis(var_data[x_level], units)
+    axis_z, label_z = convert_z_axis(var_data[x_level], set_data, units)
 
 
     # Construct axis labels and file name
-    y_axis_name = set_data.split("_")[0]
-    axis_y_name = f"{g_axis_name[y_axis_name]} [{label_z}]"
+    z_axis_name = set_data.split("_")[0]
+    axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
     save_file_name = f"{set_data}_hdf5_len.png"
 
     # **Plot Data**
-    if fft:
+    if res_type == "fft":
         # Safely extract the unit inside square brackets
         # _, _, unit_part = label_x.partition("[")    # Splits into three parts: before "[", the "[", and after "["
         # unit1, _, _ = unit_part.partition("]")      # Extracts the unit inside brackets
@@ -192,10 +163,182 @@ def graph_for_time_value(numpy_data, set_data, T, fft: bool = False, units="si")
             fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
         ploting.plot_fft(axis_x, axis_z, description, False, fft_file_name)
-    else:
+    elif res_type == "hist":
+        save_file_name = "hist_" + save_file_name
+        description_hist = ploting.PlotDescription(
+            f"Histogram for {set_data}; t = {round(calculation_time * 1000, 1)} ms",
+            axis_z_name, "Magnitude")
+        ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
+
+    elif res_type == "val":
         description = ploting.PlotDescription(f"Cut data {set_data} for t = {round(calculation_time * 1000, 3)} ms",
-                                          label_x, axis_y_name)
+                                          label_x, axis_z_name)
         ploting.plot_data(axis_x, axis_z, description, False, save_file_name)
+    else:
+        return f"Type of data for graph: {res_type} is not implemented"
+
+
+def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"):
+    """Generates a graph for a given dataset at a specific time with optional FFT analysis.
+
+        Args:
+            numpy_data: Object containing the dataset.
+            set_data: String representing the dataset name.
+            T: Time index factor (1 means last entry).
+            fft: Boolean flag to enable FFT analysis.
+            units: Unit system ("si", "pic", "db").
+
+        Returns:
+            Saves the generated plot to a file.
+        """
+    if not isinstance(numpy_data, list):
+        numpy_data = [numpy_data]
+
+    if not isinstance(set_data, list):
+        set_data = [set_data]
+
+
+    # Retrieve data
+    var_data = [data.get_data_x_t() for data in numpy_data]
+    # var_data = numpy_data.get_data_x_t()
+
+
+    # Determine the time index (x_level)
+    if T > 1 or T < 0:
+        return f"Invalid T value: T = {units}, valid values are between <{0}, {1}>"
+    x_level = -1 if T == 1 else int(len(var_data[0]) * T)
+
+    # Get time axis and convert to SI units
+    axis_time = numpy_data[0].get_time_axis()
+    calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
+
+    # Retrieve length axis only once (avoids redundant function calls)
+    length_data = numpy_data[0].get_length_axis()
+
+    axis_x, label_x = convert_x_axis(length_data, units)
+    axis_z, label_z = zip(*[convert_z_axis(v[x_level], set_data[i], units) for i, v in enumerate(var_data)])
+
+
+    # Construct axis labels and file name
+    z_axis_name = set_data[0].split("_")[0]
+
+    # print(int("abc"))
+    data_labels = []
+    for i, s in enumerate(set_data):
+        name = s.split("_")[0]
+        try:
+            second_name = int(s.split("_")[1])
+            # z_axis_name = z_axis_name + '_' + str(second_name)
+            print(f"z_axis_name: {name}")
+            data_labels.append(f"{g_axis_name[name + '_' + str(second_name)]}")
+        except:
+            print("except activated")
+            data_labels.append(f"{g_axis_name[name]}")
+
+    print(data_labels)
+    axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z[0]}]"
+    save_file_name = f"{set_data}_hdf5_len.png"
+    # title_set_data = ""
+    # for s in set_data:
+    #     title_set_data = title_set_data + s + ", "
+    title_set_data = z_axis_name
+
+    # **Plot Data**
+    if res_type == "fft":
+        # Safely extract the unit inside square brackets
+        # _, _, unit_part = label_x.partition("[")    # Splits into three parts: before "[", the "[", and after "["
+        # unit1, _, _ = unit_part.partition("]")      # Extracts the unit inside brackets
+        # unit1 = unit1.strip()                       # Trim whitespace for safety
+
+        description = ploting.PlotDescription(
+            f"Frequency Spectrum for {title_set_data}; t = {round(calculation_time * 1000, 1)} ms",
+            fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
+        fft_file_name = read.add_suffix(save_file_name, "_fft.")
+        ploting.plot_fft(axis_x, axis_z, description, False, fft_file_name)
+    elif res_type == "hist":
+        save_file_name = "hist_" + save_file_name
+        description_hist = ploting.PlotDescription(
+            f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 1)} ms",
+            axis_z_name, "Magnitude")
+        description_hist.multidata_labels(data_labels)
+        ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
+
+    elif res_type == "val":
+        description = ploting.PlotDescription(f"Cut data {title_set_data} for t = {round(calculation_time * 1000, 3)} ms",
+                                          label_x, axis_z_name)
+        ploting.plot_data(axis_x, axis_z, description, False, save_file_name)
+    else:
+        return f"Type of data for graph: {res_type} is not implemented"
+
+
+def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
+    """Generates a graph for a given dataset at a specific time with optional FFT analysis.
+
+        Args:
+            numpy_data: Object containing the dataset.
+            set_data: String representing the dataset name.
+            T: Time index factor (1 means last entry).
+            fft: Boolean flag to enable FFT analysis.
+            units: Unit system ("si", "pic", "db").
+
+        Returns:
+            Saves the generated plot to a file.
+        """
+
+    # Retrieve data
+    var_data = numpy_data.get_data_x_t()
+
+
+    # Determine the time index (x_level)
+    if N > 1 or N < 0:
+        return f"Invalid T value: T = {units}, valid values are between <{0}, {1}>"
+    x_level = -1 if N == 1 else int(len(var_data[0]) * N)
+
+    var_data1d = [float(d[x_level]) for d in var_data]
+    print(f"len var1d: {len(var_data1d)}")
+    # Get time axis and convert to SI units
+    axis_time = numpy_data.get_length_axis()
+    # calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
+    calculation_time = axis_time[x_level] * unit.ion.get_ion_skin_depth() * 0.5 / 4096
+
+    # Retrieve length axis only once (avoids redundant function calls)
+    # length_data = numpy_data.get_length_axis()
+    length_data = numpy_data.get_time_axis()
+
+    axis_x, label_x = convert_t_axis(length_data, units)
+    axis_z, label_z = convert_z_axis(var_data1d, set_data, units)
+
+
+    # Construct axis labels and file name
+    z_axis_name = set_data.split("_")[0]
+    axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
+    save_file_name = f"{set_data}_hdf5_len.png"
+
+    # **Plot Data**
+    if res_type == "fft":
+        # Safely extract the unit inside square brackets
+        # _, _, unit_part = label_x.partition("[")    # Splits into three parts: before "[", the "[", and after "["
+        # unit1, _, _ = unit_part.partition("]")      # Extracts the unit inside brackets
+        # unit1 = unit1.strip()                       # Trim whitespace for safety
+
+        description = ploting.PlotDescription(
+            f"Frequency Spectrum for {set_data}; t = {round(calculation_time, 1)} m",
+            fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
+        fft_file_name = read.add_suffix(save_file_name, "_fft.")
+        ploting.plot_fft(axis_x, axis_z, description, False, fft_file_name)
+    elif res_type == "hist":
+        save_file_name = "hist_" + save_file_name
+        description_hist = ploting.PlotDescription(
+            f"Histogram for {set_data}; t = {round(calculation_time , 1)} m",
+            axis_z_name, "Magnitude")
+        ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
+
+    elif res_type == "val":
+        description = ploting.PlotDescription(f"Cut data {set_data} for t = {round(calculation_time, 3)} m",
+                                          label_x, axis_z_name)
+        ploting.plot_data(axis_x, axis_z, description, False, save_file_name)
+    else:
+        return f"Type of data for graph: {res_type} is not implemented"
 
 
 def graph2d(numpy_data, set_data, result_units = "db"):
@@ -277,13 +420,13 @@ def graph_fft2d(numpy_data, set_data, result_units = "db"):
     print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
 
     # Extract y-axis label (first part of set_data before '_')
-    y_axis_name = set_data.split("_")[0]
-    save_file_name = f"{set_data}_2d_time.png"
+    # y_axis_name = set_data.split("_")[0]
+    save_file_name = f"{set_data}_2d_fft.png"
 
     # Convert axes based on selected units
     axis_x, label_x = convert_x_axis(length_data, result_units)
     axis_y, label_y = convert_t_axis(time_data, result_units)
-    axis_z, label_z_unit = convert_z_axis(var_data, result_units)
+    # axis_z, label_z_unit = convert_z_axis(var_data, result_units)
 
     # label_z = f"{g_axis_name[y_axis_name]} [{label_z_unit}]"
 
@@ -308,35 +451,36 @@ def graph_fft2d(numpy_data, set_data, result_units = "db"):
 
 
     print("PRINT FFT 2D")
-    zz = [sublist[len(sublist) // 2:] for sublist in np.abs(E_fft_shifted)]
+
         # zz = np.abs(E_fft_shifted)
-    tt = ky_shifted
-    xx = kx_shifted
+    # tt = ky_shifted
+    # xx = kx_shifted
+    positive_semi_space_z_tdir = [sublist[len(sublist) // 2:] for sublist in np.abs(E_fft_shifted)]
 
-    xx_c = xx[len(xx) // 2:]
-    tt_c = tt[len(tt) // 2:]
-    zz_c = zz[len(zz) // 2:]
+    positive_semi_space_x = kx_shifted[len(kx_shifted) // 2:]
+    positive_semi_space_y = ky_shifted[len(ky_shifted) // 2:]
+    positive_semi_space_z = positive_semi_space_z_tdir[len(positive_semi_space_z_tdir) // 2:]
 
-    print(f"plane xt: {len(kx_shifted)} x {len(ky_shifted)}")
-    print(f"data plane: {len(np.abs(E_fft_shifted)[0])} x {len(np.abs(E_fft_shifted))}")
-    print("planes after cut off")
-    print(f"plane xt: {len(xx_c)} x {len(tt_c)}")
-    print(f"data plane: {len(zz_c[0])} x {len(zz_c)}")
+    # print(f"plane xt: {len(kx_shifted)} x {len(ky_shifted)}")
+    # print(f"data plane: {len(np.abs(E_fft_shifted)[0])} x {len(np.abs(E_fft_shifted))}")
+    # print("planes after cut off")
+    # print(f"plane xt: {len(xx_c)} x {len(tt_c)}")
+    # print(f"data plane: {len(zz_c[0])} x {len(zz_c)}")
 
     scale_x = 40
     scale_t = 200
     scale_z = 4
 
-    xx_c1 = xx_c[:len(xx_c) // scale_x]
-    tt_c1 = tt_c[:len(tt_c) // scale_t]
-    zz_mem = [sublist[:len(sublist) // scale_x] for sublist in zz_c]
-    zz_c1 = zz_c[:len(zz_c) // scale_t]
+    res_axis_x = positive_semi_space_x[:len(positive_semi_space_x) // scale_x]
+    res_axis_y = positive_semi_space_y[:len(positive_semi_space_y) // scale_t]
+    # zz_mem = [sublist[:len(sublist) // scale_x] for sublist in zz_c]
+    res_axis_z = positive_semi_space_z[:len(positive_semi_space_z) // scale_t]
 
     descr3D = ploting.PlotDescription(r"$FFT~2D~result~of~E_x$", fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
                                           fr"$Frequency~~[{extract_unit_from_label(label_y)}]$",
                                           "Magnitude")
         # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
-    ploting.plot3Dplane_data(xx_c1, tt_c1, zz_c1, descr3D, False,
+    ploting.plot3Dplane_data(res_axis_x, res_axis_y, res_axis_z, descr3D, False,
         "fft_" + save_file_name, scale_z)
 
 
@@ -387,22 +531,22 @@ def convert_t_axis(axis_time, units="si"):
             return f"Invalid unit type: {units}"
 
 
-def convert_z_axis(axis_y, units="si"):
-
+def convert_z_axis(axis_y, set_data, units="si"):
+    variable = set_data.split("_")[0]
     match units:
         case "pic":
             axis_y_data = axis_y
-            unit_y = "om_i"
+            unit_y = g_axis_pic_units[variable]
             return [axis_y_data, unit_y]
         case "si":
             data_si = unit_convert.rescale_list(axis_y, unit.c1.e_field_const)
             axis_y_data = data_si
-            unit_y = "V/m"
+            unit_y = g_axis_si_units[variable]
             return [axis_y_data, unit_y]
         case "db":
             data_si = unit_convert.rescale_list(axis_y, unit.c1.e_field_const)
             axis_y_data = data_si
-            unit_y = "V/m"
+            unit_y = g_axis_si_units[variable]
             return [axis_y_data, unit_y]
         case _:
             return f"Invalid unit type: {units}"
