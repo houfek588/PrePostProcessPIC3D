@@ -23,7 +23,11 @@ def check_saved_data(var):
                     hdf.result_analysis(var)
                 print("Data loaded")
             except:
-                print(f"Data with name {var} not available")
+                try:
+                    vtk.conserve_analysis(var)
+                    print("Data loaded")
+                except:
+                    print(f"Data with name {var} not available")
 
 
     else:
@@ -54,14 +58,20 @@ if __name__ == '__main__':
     field_output_Ji = False
     par_output_velocity = True
 
-    vars = ["velocity_1_x", "velocity_2_x", "velocity_3_x", "Efield_x", 'rho_e']
+    vel = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
+    single_var = ["Efield_x", "energy_ele"]
+    # 'rho_e'
+    all = vel+single_var
+    # var = vars[6]
+    print(f">> chosen data: {all}")
 
-    var = vars[3]
-    print(f">> chosen data: {var}")
-    check_saved_data(var)
+    for one in all:
+        check_saved_data(one)
 
-    data.single_result_analysis(var)
-    # data.multi_result_analysis([vars[0], vars[1], vars[2]])
+    # setting = read.ReadHDFSettings(folder + "settings.hdf")
+    for s in single_var:
+        data.single_result_analysis(s)
+    data.multi_result_analysis(vel)
 
     # result_type = "hdf11"
 

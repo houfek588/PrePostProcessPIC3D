@@ -12,11 +12,13 @@ import post_process.read_files as read
 
 # print(d[0][0])
 # print(a[0][0])
-g_keys = ["Efield", "Bfield", "rhoe", "rhoi", "Je", "Ji", "velocity", "velocity_1", "velocity_2", "velocity_3"]
+g_keys = ["Efield", "Bfield", "rhoe", "rhoi", "Je", "Ji", "velocity", "velocity_1", "velocity_2", "velocity_3",
+          "energy", "energy_kin", "energy_ele"]
 g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density", "Electron current density",
-           "Ion current density", "Velocity", "Electron velocity", "Ion velocity", "El. beam velocity"]
-g_pic_units = ["om_i ", "??", "4pi", "4pi", "??", "??", "c", "c", "c", "c"]
-g_si_units = ["V/m ", "T", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s"]
+           "Ion current density", "Velocity", "Electron velocity", "Ion velocity", "El. beam velocity", "Energy", "Kin. energy",
+           "El. energy"]
+g_pic_units = ["om_i ", "??", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??"]
+g_si_units = ["V/m ", "T", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J", "J", "J"]
 
 g_axis_name = {key: g_names[i] for i, key in enumerate(g_keys)}
 g_axis_si_units = {key: g_si_units[i] for i, key in enumerate(g_keys)}
@@ -47,9 +49,18 @@ class ReadNMPFileData:
         category = name_split[0] if name_split else ""
         axis = name_split[1] if len(name_split) > 1 else "x"
 
-        data_name = "script_data/" + set_data + "_data2D.npy"
-        print(data_name)
-        self.data = np.load(data_name)
+        try:
+            data_name = "script_data/" + set_data + "_data2D.npy"
+            self.data = np.load(data_name)
+            self.data_dim = 2
+        except:
+            data_name = "script_data/" + set_data + "_data1D.npy"
+            self.data = np.load(data_name)
+            self.data_dim = 1
+        # print(f"loaded data: {data_name}")
+
+    def get_data_dimension(self):
+        return self.data_dim
 
     def get_data_x_t(self):
         return self.data
@@ -65,6 +76,7 @@ class ReadNMPFileData:
         dt = setting.get_time_step_size()
         step = read_step_size()
         axis_time = []
+        # print(f"data: {self.data}")
         for i in range(0, len(self.data)):
             axis_time.append(i * step * dt)
         # axis_time = []
@@ -74,10 +86,12 @@ class ReadNMPFileData:
         return axis_time
 
     def get_length_axis(self):
+        if self.data_dim == 1:
+            return "this fuction is not available for 1D data"
+
         axis_x = []
         for i in range(0, len(self.data[0])):
             axis_x.append(i)
-
         return axis_x
 
 
@@ -87,13 +101,20 @@ def single_result_analysis(set_data):
 
     numpy_data = ReadNMPFileData(set_data)
 
+    if numpy_data.get_data_dimension() == 1:
+        graph_energy(numpy_data, set_data, "val", "si")
+    else:
+        graph_for_pos_value(numpy_data, set_data, 0.5, "val_ms", "si")
+        graph2d_fft_in_time(numpy_data, set_data)
     # function calls
     # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
-    graph_for_pos_value(numpy_data, set_data, 1, "val")
+    # graph_for_pos_value(numpy_data, set_data, 1, "val_ms", "si")
     # graph_for_time_value(numpy_data, set_data, 1, True)
     # graph2d(numpy_data, set_data)
     # graph2d_fft_in_time(numpy_data, set_data)
     # graph_fft2d(numpy_data, set_data)
+
+    #
 
 
 def multi_result_analysis(set_data: list):
@@ -104,6 +125,7 @@ def multi_result_analysis(set_data: list):
     # numpy_data = ReadNMPFileData(set_data)
 
     # graph_multi_time_value(numpy_data[0], set_data[0], 1, "hist", "pic")
+    graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic")
     graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic")
     # function calls
     # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
@@ -229,13 +251,13 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
         try:
             second_name = int(s.split("_")[1])
             # z_axis_name = z_axis_name + '_' + str(second_name)
-            print(f"z_axis_name: {name}")
+            # print(f"z_axis_name: {name}")
             data_labels.append(f"{g_axis_name[name + '_' + str(second_name)]}")
         except:
             print("except activated")
             data_labels.append(f"{g_axis_name[name]}")
 
-    print(data_labels)
+    # print(data_labels)
     axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z[0]}]"
     save_file_name = f"{set_data}_hdf5_len.png"
     # title_set_data = ""
@@ -258,7 +280,7 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
     elif res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
-            f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 1)} ms",
+            f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 3)} ms",
             axis_z_name, "Magnitude")
         description_hist.multidata_labels(data_labels)
         ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
@@ -288,24 +310,32 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
     # Retrieve data
     var_data = numpy_data.get_data_x_t()
 
+    with open("parameters_hdf5.json", "r") as file:
+        parameters = json.load(file)
+    setting = read.ReadHDFSettings(parameters["folder"] + "settings.hdf")
+    nx = setting.get_num_cells("x")
+    Lx = setting.get_box_size("x")
+
+
 
     # Determine the time index (x_level)
     if N > 1 or N < 0:
-        return f"Invalid T value: T = {units}, valid values are between <{0}, {1}>"
+        return f"Invalid N value: N = {units}, valid values are between <{0}, {1}>"
     x_level = -1 if N == 1 else int(len(var_data[0]) * N)
 
     var_data1d = [float(d[x_level]) for d in var_data]
-    print(f"len var1d: {len(var_data1d)}")
+    # print(f"len var1d: {len(var_data1d)}")
+
     # Get time axis and convert to SI units
-    axis_time = numpy_data.get_length_axis()
+    axis_position = numpy_data.get_length_axis()
     # calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
-    calculation_time = axis_time[x_level] * unit.ion.get_ion_skin_depth() * 0.5 / 4096
+    calculation_time = axis_position[x_level] * unit.ion.get_ion_skin_depth() * Lx / nx
 
     # Retrieve length axis only once (avoids redundant function calls)
     # length_data = numpy_data.get_length_axis()
-    length_data = numpy_data.get_time_axis()
+    time_data = numpy_data.get_time_axis()
 
-    axis_x, label_x = convert_t_axis(length_data, units)
+    axis_t, label_t = convert_t_axis(time_data, units)
     axis_z, label_z = convert_z_axis(var_data1d, set_data, units)
 
 
@@ -322,21 +352,31 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
         # unit1 = unit1.strip()                       # Trim whitespace for safety
 
         description = ploting.PlotDescription(
-            f"Frequency Spectrum for {set_data}; t = {round(calculation_time, 1)} m",
-            fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
+            f"Frequency Spectrum for {set_data}; x = {round(calculation_time, 1)} m",
+            fr"$Wavenumber~~[{extract_unit_from_label(label_t)}^{{-1}}]$", "Magnitude")
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
-        ploting.plot_fft(axis_x, axis_z, description, False, fft_file_name)
+        ploting.plot_fft(axis_t, axis_z, description, False, fft_file_name)
     elif res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
-            f"Histogram for {set_data}; t = {round(calculation_time , 1)} m",
+            f"Histogram for {set_data}; x = {round(calculation_time , 1)} m",
             axis_z_name, "Magnitude")
         ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
 
     elif res_type == "val":
-        description = ploting.PlotDescription(f"Cut data {set_data} for t = {round(calculation_time, 3)} m",
-                                          label_x, axis_z_name)
-        ploting.plot_data(axis_x, axis_z, description, False, save_file_name)
+        description = ploting.PlotDescription(f"Cut data {set_data} for x = {round(calculation_time, 3)} m",
+                                          label_t, axis_z_name)
+        ploting.plot_data(axis_t, axis_z, description, False, save_file_name)
+    elif res_type == "val_ms":
+        if units == "si":
+            label_t_ms = label_t.replace("[s]", "[ms]")
+        else:
+            raise Exception(f"For type {res_type} has to be chosen SI units, units=si")
+
+        description = ploting.PlotDescription(f"Cut data {set_data} for x = {round(calculation_time, 3)} m",
+                                          label_t_ms, axis_z_name)
+        axis_t_ms = unit_convert.rescale_list(axis_t,1000)
+        ploting.plot_data(axis_t_ms, axis_z, description, False, save_file_name)
     else:
         return f"Type of data for graph: {res_type} is not implemented"
 
@@ -359,7 +399,7 @@ def graph2d(numpy_data, set_data, result_units = "db"):
     # Convert axes based on selected units
     axis_x, label_x = convert_x_axis(length_data, result_units)
     axis_y, label_y = convert_t_axis(time_data, result_units)
-    axis_z, label_z_unit = convert_z_axis(var_data, result_units)
+    axis_z, label_z_unit = convert_z_axis(var_data, set_data, result_units)
 
     label_z = f"{g_axis_name[y_axis_name]} [{label_z_unit}]"
 
@@ -383,7 +423,7 @@ def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bo
 
     axis_z = []
     for level in range(0,len(var_data)):
-        raw_axis_z, label_z_unit = convert_z_axis(var_data[level], "si")
+        raw_axis_z, label_z_unit = convert_z_axis(var_data[level], set_data, "si")
         fft_axis_x, fft_axis_z = fft_data_transform(raw_axis_x, raw_axis_z)
         axis_z.append(fft_axis_z)
 
@@ -484,7 +524,21 @@ def graph_fft2d(numpy_data, set_data, result_units = "db"):
         "fft_" + save_file_name, scale_z)
 
 
+def graph_energy(numpy_data, set_data, res_type = "val", units="si"):
 
+    energy_data = numpy_data.get_data_x_t()
+    time_data = numpy_data.get_time_axis()
+    axis_t, label_t = convert_t_axis(time_data, units)
+    axis_z, label_z = convert_z_axis(energy_data, set_data, units)
+
+    z_axis_name = set_data
+
+    if res_type == "val":
+        axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z[0]}]"
+        description = ploting.PlotDescription(f"Time development {g_axis_name[set_data]}", label_t, axis_z_name)
+        ploting.plot_data(axis_t, axis_z, description, False, "field")
+    else:
+        return f"Type of data for graph: {res_type} is not implemented"
 
 
 
@@ -493,8 +547,14 @@ def graph_fft2d(numpy_data, set_data, result_units = "db"):
 # --------------------------------------------------------------------------------------------
 #                                   HELP FUNCTIONS
 def convert_x_axis(axis_x, units="si"):
-    Lx = 0.5
-    nx = 4096
+    with open("parameters_hdf5.json", "r") as file:
+        parameters = json.load(file)
+    setting = read.ReadHDFSettings(parameters["folder"] + "settings.hdf")
+    nx = setting.get_num_cells("x")
+    Lx = setting.get_box_size("x")
+
+    # Lx = 0.5
+    # nx = 4096
 
     match units:
         case "pic":
@@ -533,21 +593,31 @@ def convert_t_axis(axis_time, units="si"):
 
 def convert_z_axis(axis_y, set_data, units="si"):
     variable = set_data.split("_")[0]
+
+    scale_factors = {
+        "T": unit.c1.b_field_const,
+        "m/s": unit.c1.vel_const,
+        "V/m": unit.c1.e_field_const,
+        "J": unit.c1.energy_const,
+        "A/m": unit.c1.charge_const,
+    }
+    # print(f"convert_z_axis.variable: {variable}")
     match units:
         case "pic":
-            axis_y_data = axis_y
-            unit_y = g_axis_pic_units[variable]
-            return [axis_y_data, unit_y]
-        case "si":
-            data_si = unit_convert.rescale_list(axis_y, unit.c1.e_field_const)
-            axis_y_data = data_si
-            unit_y = g_axis_si_units[variable]
-            return [axis_y_data, unit_y]
-        case "db":
-            data_si = unit_convert.rescale_list(axis_y, unit.c1.e_field_const)
-            axis_y_data = data_si
-            unit_y = g_axis_si_units[variable]
-            return [axis_y_data, unit_y]
+            axis_z_data = axis_y
+            unit_z = g_axis_pic_units[variable]
+            # print(f"unit_y PIC: {unit_z}")
+            return [axis_z_data, unit_z]
+        case "si" | "db":
+            unit_z = g_axis_si_units[variable]
+            scale = scale_factors.get(unit_z)
+            if scale:
+                axis_z_data = unit_convert.rescale_list(axis_y, scale)
+            else:
+                axis_z_data = axis_y  # fallback to original if unit not found
+
+            # print(f"unit_z SI: {unit_z}")
+            return [axis_z_data, unit_z]
         case _:
             return f"Invalid unit type: {units}"
 

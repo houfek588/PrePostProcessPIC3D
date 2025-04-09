@@ -459,3 +459,26 @@ def result_analysis(set_data):
     # # ploting.plot_all_graphs()
 
     print("vtk analysing done")
+
+
+def conserve_analysis(set_data):
+
+    with open("parameters_vtk.json", "r") as file:
+        parameters = json.load(file)
+    folder = parameters["folder"]
+
+    energy_data = read.ReadConsData(folder, "ConservedQuantities.txt")
+    available = ["energy_kin", "energy_ele"]
+    for a in available:
+        if set_data == a:
+            # set_data = f"{proc_var_dict[variable_name]}_{axis}"
+            new_file_name = "script_data/" + set_data + "_data1D.npy"
+            # print(energy_data.get_e_energy())
+            if set_data == "energy_kin":
+                np.save(new_file_name, energy_data.get_k_energy()[1])
+            elif set_data == "energy_ele":
+                np.save(new_file_name, energy_data.get_e_energy()[1])
+            else:
+                raise Exception(f"not implemented analysis for data: {set_data}")
+            print(f"new file created on {new_file_name}")
+            break
