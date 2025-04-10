@@ -246,38 +246,6 @@ class ReadVTKFilesData:
             """
         return self.data_x_t
 
-        # # Check if the data is vector data
-        # if not self.is_vector():
-        #     return self.data_x_t  # Return scalar data directly
-        #
-        # # Map vector component to index
-        # dim_mapping = {"x": 0, "y": 1, "z": 2}
-        # if vector_component not in dim_mapping:
-        #     raise ValueError(
-        #         f"Invalid vector component '{vector_component}'. Expected one of {list(dim_mapping.keys())}.")
-        #
-        # dim_idx = dim_mapping[vector_component]
-
-        # if dim_idx == 0:
-        #     if self.data2D_x == None:
-        #         print("data x loading...")
-        #         self.data2D_x = self.preprocess_2D_data("x")
-        #     return self.data2D_x
-        #
-        # if dim_idx == 1:
-        #     if self.data2D_y == None:
-        #         self.data2D_y = self.preprocess_2D_data("y")
-        #     return self.data2D_y
-        #
-        # if dim_idx == 2:
-        #     if self.data2D_z == None:
-        #         self.data2D_z = self.preprocess_2D_data("z")
-        #     return self.data2D_z
-
-        # Use a nested list comprehension to extract the specified vector component
-        # return [[float(d[dim_idx]) for d in time_step] for time_step in self.data_x_t]
-        # if self.is_vector():
-
 
     def get_data_name(self):
         """Gets the name of the data from the first file."""

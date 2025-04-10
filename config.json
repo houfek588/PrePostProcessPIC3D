@@ -1,0 +1,8 @@
+{
+  "result_folder": "../res_data_vth/beam02/data/",
+  "output_folder": "../res_data_vth/beam02/result_new_scr/",
+  "save_graphs": "True",
+  "FieldOutputCycle": 10,
+  "ParticleOutputCycle": 5000,
+  "NumberHdfFiles": 32
+}

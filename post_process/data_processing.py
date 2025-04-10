@@ -7,41 +7,24 @@ import pre_process.unit_input as unit
 from post_process.vtk_processing import read_step_size
 import post_process.read_files as read
 
-# d = np.load("../script_data/Efield_x_data2D.npy")
-# a = np.load("../script_data/velocity_1_x_data2D.npy")
+
 
 # print(d[0][0])
 # print(a[0][0])
-g_keys = ["Efield", "Bfield", "rhoe", "rhoi", "Je", "Ji", "velocity", "velocity_1", "velocity_2", "velocity_3",
+g_keys = ["Efield", "Bfield", "rhoe0", "rhoi1", "rhoe2", "Je", "Ji", "velocity", "velocity_1", "velocity_2", "velocity_3",
           "energy", "energy_kin", "energy_ele"]
-g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density", "Electron current density",
+g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density", "Electron density", "Electron current density",
            "Ion current density", "Velocity", "Electron velocity", "Ion velocity", "El. beam velocity", "Energy", "Kin. energy",
            "El. energy"]
-g_pic_units = ["om_i ", "??", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??"]
-g_si_units = ["V/m ", "T", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J", "J", "J"]
+g_pic_units = ["om_i ", "??", "4pi", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??"]
+g_si_units = ["V/m ", "T", "1", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J", "J", "J"]
+g_type_data = ["field ", "field", "field", "field", "field", "field", "field", "part", "part", "part", "part", "field", "field", "field"]
 
 g_axis_name = {key: g_names[i] for i, key in enumerate(g_keys)}
 g_axis_si_units = {key: g_si_units[i] for i, key in enumerate(g_keys)}
 g_axis_pic_units = {key: g_pic_units[i] for i, key in enumerate(g_keys)}
-# g_axis_name = {
-#     "Efield": "Electric field ",
-#     "Bfield": "Magnetic field []",
-#     "rhoe": "Electron density []",
-#     "rhoi": "Ion density []",
-#     "Je": "Electron current density []",
-#     "Ji": "Ion current density []",
-#     "velocity": "Velocity"
-# }
-#
-# g_axis_units = {
-#     "Efield": "Electric field ",
-#     "Bfield": "Magnetic field []",
-#     "rhoe": "Electron density []",
-#     "rhoi": "Ion density []",
-#     "Je": "Electron current density []",
-#     "Ji": "Ion current density []",
-#     "velocity": "Velocity"
-# }
+g_axis_type = {key: g_type_data[i] for i, key in enumerate(g_keys)}
+
 
 class ReadNMPFileData:
     def __init__(self, set_data):
@@ -51,13 +34,21 @@ class ReadNMPFileData:
 
         try:
             data_name = "script_data/" + set_data + "_data2D.npy"
+            print(data_name)
             self.data = np.load(data_name)
             self.data_dim = 2
         except:
             data_name = "script_data/" + set_data + "_data1D.npy"
+            print(data_name)
             self.data = np.load(data_name)
             self.data_dim = 1
         # print(f"loaded data: {data_name}")
+
+        z_axis_name = set_data.split("_")[0]
+        # print(f"set_data[0]: {set_data}")
+        # print(f"z_axis_name: {z_axis_name}")
+        self.type = g_axis_type[z_axis_name]
+        # print(f"self.type: {self.type}")
 
     def get_data_dimension(self):
         return self.data_dim
@@ -74,7 +65,7 @@ class ReadNMPFileData:
         folder = parameters["folder"]
         setting = read.ReadHDFSettings(folder + "settings.hdf")
         dt = setting.get_time_step_size()
-        step = read_step_size()
+        step = read_step_size(self.type)
         axis_time = []
         # print(f"data: {self.data}")
         for i in range(0, len(self.data)):
@@ -106,6 +97,7 @@ def single_result_analysis(set_data):
     else:
         graph_for_pos_value(numpy_data, set_data, 0.5, "val_ms", "si")
         graph2d_fft_in_time(numpy_data, set_data)
+        graph_fft2d(numpy_data, set_data)
     # function calls
     # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
     # graph_for_pos_value(numpy_data, set_data, 1, "val_ms", "si")
@@ -125,8 +117,8 @@ def multi_result_analysis(set_data: list):
     # numpy_data = ReadNMPFileData(set_data)
 
     # graph_multi_time_value(numpy_data[0], set_data[0], 1, "hist", "pic")
-    graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic")
-    graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic")
+    graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0")
+    graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1")
     # function calls
     # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
     # graph_for_time_value(numpy_data, set_data, 1, True)
@@ -134,7 +126,7 @@ def multi_result_analysis(set_data: list):
     # graph2d_fft_in_time(numpy_data, set_data)
     # graph_fft2d(numpy_data, set_data)
 
-def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si"):
+def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id=""):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
 
         Args:
@@ -150,6 +142,10 @@ def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si"):
 
     # Retrieve data
     var_data = numpy_data.get_data_x_t()
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
+    img_folder = parameters["output_folder"]
+    save_graph = parameters["save_graphs"]
 
 
     # Determine the time index (x_level)
@@ -171,7 +167,7 @@ def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si"):
     # Construct axis labels and file name
     z_axis_name = set_data.split("_")[0]
     axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
-    save_file_name = f"{set_data}_hdf5_len.png"
+    save_file_name = f"{set_data}_lenDevel{user_id}.png"
 
     # **Plot Data**
     if res_type == "fft":
@@ -184,23 +180,23 @@ def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si"):
             f"Frequency Spectrum for {set_data}; t = {round(calculation_time * 1000, 1)} ms",
             fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
-        ploting.plot_fft(axis_x, axis_z, description, False, fft_file_name)
+        ploting.plot_fft(axis_x, axis_z, description, save_graph, img_folder+fft_file_name)
     elif res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {set_data}; t = {round(calculation_time * 1000, 1)} ms",
             axis_z_name, "Magnitude")
-        ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
+        ploting.plot_histogram(axis_z, 4096, description_hist, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
         description = ploting.PlotDescription(f"Cut data {set_data} for t = {round(calculation_time * 1000, 3)} ms",
                                           label_x, axis_z_name)
-        ploting.plot_data(axis_x, axis_z, description, False, save_file_name)
+        ploting.plot_data(axis_x, axis_z, description, save_graph, img_folder+save_file_name)
     else:
         return f"Type of data for graph: {res_type} is not implemented"
 
 
-def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"):
+def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si",user_id=""):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
 
         Args:
@@ -223,6 +219,10 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
     # Retrieve data
     var_data = [data.get_data_x_t() for data in numpy_data]
     # var_data = numpy_data.get_data_x_t()
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
+    img_folder = parameters["output_folder"]
+    save_graph = parameters["save_graphs"]
 
 
     # Determine the time index (x_level)
@@ -259,11 +259,12 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
 
     # print(data_labels)
     axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z[0]}]"
-    save_file_name = f"{set_data}_hdf5_len.png"
+    title_set_data = z_axis_name
+    save_file_name = f"{title_set_data}_lenDevel{user_id}.png"
     # title_set_data = ""
     # for s in set_data:
     #     title_set_data = title_set_data + s + ", "
-    title_set_data = z_axis_name
+
 
     # **Plot Data**
     if res_type == "fft":
@@ -276,24 +277,24 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
             f"Frequency Spectrum for {title_set_data}; t = {round(calculation_time * 1000, 1)} ms",
             fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
-        ploting.plot_fft(axis_x, axis_z, description, False, fft_file_name)
+        ploting.plot_fft(axis_x, axis_z, description, save_graph, img_folder+fft_file_name)
     elif res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 3)} ms",
             axis_z_name, "Magnitude")
         description_hist.multidata_labels(data_labels)
-        ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
+        ploting.plot_histogram(axis_z, 4096, description_hist, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
         description = ploting.PlotDescription(f"Cut data {title_set_data} for t = {round(calculation_time * 1000, 3)} ms",
                                           label_x, axis_z_name)
-        ploting.plot_data(axis_x, axis_z, description, False, save_file_name)
+        ploting.plot_data(axis_x, axis_z, description, save_graph, img_folder+save_file_name)
     else:
         return f"Type of data for graph: {res_type} is not implemented"
 
 
-def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
+def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si", user_id=""):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
 
         Args:
@@ -309,14 +310,18 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
 
     # Retrieve data
     var_data = numpy_data.get_data_x_t()
-
-    with open("parameters_hdf5.json", "r") as file:
+    with open("config.json", "r") as file:
         parameters = json.load(file)
-    setting = read.ReadHDFSettings(parameters["folder"] + "settings.hdf")
+    img_folder = parameters["output_folder"]
+    save_graph = parameters["save_graphs"]
+
+    # with open("parameters_hdf5.json", "r") as file:
+    #     parameters = json.load(file)
+    setting = read.ReadHDFSettings(parameters["result_folder"] + "settings.hdf")
     nx = setting.get_num_cells("x")
     Lx = setting.get_box_size("x")
 
-
+    # print(f"len: {len(var_data)}")
 
     # Determine the time index (x_level)
     if N > 1 or N < 0:
@@ -342,7 +347,7 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
     # Construct axis labels and file name
     z_axis_name = set_data.split("_")[0]
     axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
-    save_file_name = f"{set_data}_hdf5_len.png"
+    save_file_name = f"{set_data}_timeDevel{user_id}.png"
 
     # **Plot Data**
     if res_type == "fft":
@@ -355,18 +360,18 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
             f"Frequency Spectrum for {set_data}; x = {round(calculation_time, 1)} m",
             fr"$Wavenumber~~[{extract_unit_from_label(label_t)}^{{-1}}]$", "Magnitude")
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
-        ploting.plot_fft(axis_t, axis_z, description, False, fft_file_name)
+        ploting.plot_fft(axis_t, axis_z, description, save_graph, img_folder+fft_file_name)
     elif res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {set_data}; x = {round(calculation_time , 1)} m",
             axis_z_name, "Magnitude")
-        ploting.plot_histogram(axis_z, 4096, description_hist, False, save_file_name)
+        ploting.plot_histogram(axis_z, 4096, description_hist, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
         description = ploting.PlotDescription(f"Cut data {set_data} for x = {round(calculation_time, 3)} m",
                                           label_t, axis_z_name)
-        ploting.plot_data(axis_t, axis_z, description, False, save_file_name)
+        ploting.plot_data(axis_t, axis_z, description, save_graph, img_folder+save_file_name)
     elif res_type == "val_ms":
         if units == "si":
             label_t_ms = label_t.replace("[s]", "[ms]")
@@ -376,12 +381,12 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si"):
         description = ploting.PlotDescription(f"Cut data {set_data} for x = {round(calculation_time, 3)} m",
                                           label_t_ms, axis_z_name)
         axis_t_ms = unit_convert.rescale_list(axis_t,1000)
-        ploting.plot_data(axis_t_ms, axis_z, description, False, save_file_name)
+        ploting.plot_data(axis_t_ms, axis_z, description, save_graph, img_folder+save_file_name)
     else:
         return f"Type of data for graph: {res_type} is not implemented"
 
 
-def graph2d(numpy_data, set_data, result_units = "db"):
+def graph2d(numpy_data, set_data, result_units = "db", user_id=""):
     """Generate a 2D time-space graph from numpy data and save as an image."""
 
     # Extract raw data
@@ -389,12 +394,17 @@ def graph2d(numpy_data, set_data, result_units = "db"):
     time_data = numpy_data.get_time_axis()
     length_data = numpy_data.get_length_axis()
 
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
+    img_folder = parameters["output_folder"]
+    save_graph = parameters["save_graphs"]
 
-    print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
+
+    # print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
 
     # Extract y-axis label (first part of set_data before '_')
     y_axis_name = set_data.split("_")[0]
-    save_file_name = f"{set_data}_2d_time.png"
+    save_file_name = f"{set_data}_2d_timeDevel{user_id}.png"
 
     # Convert axes based on selected units
     axis_x, label_x = convert_x_axis(length_data, result_units)
@@ -408,16 +418,21 @@ def graph2d(numpy_data, set_data, result_units = "db"):
     descr3D.set_ylim(read.min_value(var_data), read.max_value(var_data))
 
     # Plot and save the figure
-    ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, False, save_file_name)
+    ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, save_graph, img_folder+save_file_name)
 
 
-def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bool = False):
+def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bool = False, user_id=""):
     """Generate a 2D time-space graph from numpy data and save as an image."""
 
     # Extract raw data
     var_data = numpy_data.get_data_x_t()
     time_data = numpy_data.get_time_axis()
     length_data = numpy_data.get_length_axis()
+
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
+    img_folder = parameters["output_folder"]
+    save_graph = parameters["save_graphs"]
 
     raw_axis_x, label_x = convert_x_axis(length_data, "si")
 
@@ -430,7 +445,7 @@ def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bo
 
     # Extract y-axis label (first part of set_data before '_')
     y_axis_name = set_data.split("_")[0]
-    save_file_name = f"{set_data}_2d_fft_time.png"
+    save_file_name = f"{set_data}_2d_freqDevel{user_id}.png"
 
     # Convert axes based on selected units
     axis_x = fft_axis_x
@@ -444,12 +459,12 @@ def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bo
 
     # Plot and save the figure
     if wire_plot:
-        ploting.plot3Dwire_data(axis_x, axis_y, axis_z, descr3D, False, save_file_name)
+        ploting.plot3Dwire_data(axis_x, axis_y, axis_z, descr3D, save_graph, img_folder+save_file_name)
     else:
-        ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, False, save_file_name)
+        ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, save_graph, img_folder+save_file_name)
 
 
-def graph_fft2d(numpy_data, set_data, result_units = "db"):
+def graph_fft2d(numpy_data, set_data, result_units = "db", user_id=""):
     """Generate a 2D time-space graph from numpy data and save as an image."""
 
     # Extract raw data
@@ -457,11 +472,16 @@ def graph_fft2d(numpy_data, set_data, result_units = "db"):
     time_data = numpy_data.get_time_axis()
     length_data = numpy_data.get_length_axis()
 
-    print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
+    img_folder = parameters["output_folder"]
+    save_graph = parameters["save_graphs"]
+
+    # print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
 
     # Extract y-axis label (first part of set_data before '_')
     # y_axis_name = set_data.split("_")[0]
-    save_file_name = f"{set_data}_2d_fft.png"
+    save_file_name = f"{set_data}_2d_fft{user_id}.png"
 
     # Convert axes based on selected units
     axis_x, label_x = convert_x_axis(length_data, result_units)
@@ -520,23 +540,29 @@ def graph_fft2d(numpy_data, set_data, result_units = "db"):
                                           fr"$Frequency~~[{extract_unit_from_label(label_y)}]$",
                                           "Magnitude")
         # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
-    ploting.plot3Dplane_data(res_axis_x, res_axis_y, res_axis_z, descr3D, False,
-        "fft_" + save_file_name, scale_z)
+    ploting.plot3Dplane_data(res_axis_x, res_axis_y, res_axis_z, descr3D, save_graph,
+        img_folder + save_file_name, scale_z)
 
 
-def graph_energy(numpy_data, set_data, res_type = "val", units="si"):
+def graph_energy(numpy_data, set_data, res_type = "val", units="si", user_id=""):
 
     energy_data = numpy_data.get_data_x_t()
     time_data = numpy_data.get_time_axis()
     axis_t, label_t = convert_t_axis(time_data, units)
     axis_z, label_z = convert_z_axis(energy_data, set_data, units)
 
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
+    img_folder = parameters["output_folder"]
+    save_graph = parameters["save_graphs"]
+    save_file_name = f"{set_data}{user_id}.png"
+
     z_axis_name = set_data
 
     if res_type == "val":
         axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z[0]}]"
         description = ploting.PlotDescription(f"Time development {g_axis_name[set_data]}", label_t, axis_z_name)
-        ploting.plot_data(axis_t, axis_z, description, False, "field")
+        ploting.plot_data(axis_t, axis_z, description, save_graph, img_folder + save_file_name)
     else:
         return f"Type of data for graph: {res_type} is not implemented"
 

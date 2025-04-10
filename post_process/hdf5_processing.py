@@ -8,52 +8,59 @@ from distutils.util import strtobool
 import numpy as np
 
 def result_analysis(set_data):
-    # path = "../res_data_vth/beam01_drftB/data_hdf5/"
-    # file = "restart0.hdf"
-    # number_files = 32
+    """
+        Analyze particle data from HDF5 files and save the result as a 2D NumPy array.
 
-    print(f"start hdf5 for {set_data} analysing...")
-    with open("parameters_hdf5.json", "r") as file:
+        Parameters:
+            set_data (str): A string describing the quantity, species, and axis.
+                            Format: 'category_numAxis' (e.g., 'velocity_1x')
+        """
+    print(f"start HDF5 analysis for: {set_data}")
+    with open("config.json", "r") as file:
         parameters = json.load(file)
 
-    # read parameters to variables
-    folder = parameters["folder"]
+    # Load configuration settings from config.json
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
 
-    file = parameters["file"]
-    number_files = parameters["num_of_files"]
+    # Extract relevant parameters
+    folder = parameters["result_folder"]
+    number_files = parameters["NumberHdfFiles"]
+    hdf_file = "proc0.hdf"  # Starting HDF5 file name
 
-    # field_par = parameters["field"]
-    # particle_par = parameters["particle"]
-
+    # Read simulation settings (e.g., number of particle species)
     setting = read.ReadHDFSettings(folder + "settings.hdf")
     ns = setting.get_num_species()
 
-    # print(setting.get_num_cycles())
-    # print(type(parameters))
-
-
-
-
+    # Create a dictionary mapping category/species/index to file symbols
     particle_dict = create_particle_dict(ns)
-    print(particle_dict)
-    # Parsing the key
-    category, num, axis = set_data.split("_")  # Splits "velocity_1x" into ["velocity", "1", "x"]
-    print(f"cat and num: {category, num, axis}")
 
-    # Fetching the corresponding data
-    species, symbol = particle_dict[category][num][axis]
-    print(f"species: {species, symbol}")  # Output: species_0 u
+    # Parse the input string (e.g., 'velocity_1x') into components
+    try:
+        category, num, axis = set_data.split("_")  # Example: "velocity_1x" -> "velocity", "1", "x"
+    except ValueError:
+        raise ValueError(f"Invalid format for set_data: '{set_data}'. Expected format 'category_numAxis'.")
 
-    p_file = read.ReadHDFParticleData(folder, file, number_files, species, symbol)
-    new_file_name = "script_data/" + set_data + "_data2D.npy"
-    np.save("script_data/" + set_data + "_data2D.npy", p_file.data_x_t)
-    print(f"new file created on {new_file_name}")
+    print(f"Category: {category}, Num: {num}, Axis: {axis}")
 
-    # --------------------------------------------------------------------------------------------------
-    # f_file = read.ReadHDFFieldData(folder, file, number_files, field_par["variable"], field_par["axis"])
-    # field_graphs(f_file, parameters)
+    # Look up the corresponding species and symbol for the data
+    try:
+        species, symbol = particle_dict[category][num][axis]
+    except KeyError:
+        raise KeyError(f"No matching species/symbol found for: {set_data}")
 
-    # ploting.plot_all_graphs()
+    print(f"Extracting data for species: {species}, symbol: {symbol}")
+
+    # Read the particle data from HDF5 files
+    p_file = read.ReadHDFParticleData(folder, hdf_file, number_files, species, symbol)
+
+    # Save the extracted 2D data (time vs. x-axis) to a NumPy file
+    new_file_name = f"script_data/{set_data}_data2D.npy"
+    np.save(new_file_name, p_file.data_x_t)
+
+    print(f"new file created: {new_file_name}")
+
+
 
 
 def create_particle_dict(ns):
