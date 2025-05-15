@@ -3,6 +3,7 @@ import post_process.hdf5_processing as hdf
 import post_process.ploting as ploting
 import post_process.data_processing as data
 import os
+import json
 
 def check_saved_data(var):
     script_data_folder = "script_data"
@@ -19,11 +20,11 @@ def check_saved_data(var):
             try:
                 try:
                     vtk.result_analysis(var)
-                    print("vtk data loaded")
+                    print(" vtk data loaded")
                 except:
                     hdf.result_analysis(var)
-                    print("hdf data loaded")
-                print("Data loaded")
+                    print(" hdf data loaded")
+                # print("Data loaded")
             except:
                 try:
                     vtk.conserve_analysis(var)
@@ -39,6 +40,26 @@ def check_saved_data(var):
         except:
             hdf.result_analysis(var)
         print("Data loaded")
+
+
+def clear_script_data():
+    # Load configuration from JSON file
+    with open("config.json", "r") as file:
+        parameters = json.load(file)
+
+    # Extract relevant parameters
+    # folder_path = parameters["result_folder"]
+    folder_path = "script_data/"
+
+    # Loop over files and remove them
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+
+        # Remove only files (not folders)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print(f"deleted: {file_path}")
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -61,6 +82,7 @@ if __name__ == '__main__':
     par_output_velocity = True
 
     multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
+    # multi_var = []
     single_var = ["Efield_x", "rhoe0", "energy_ele"]
     # 'rho_e'
     all = multi_var+single_var
@@ -73,11 +95,15 @@ if __name__ == '__main__':
     for one in all:
         check_saved_data(one)
 
-    # setting = read.ReadHDFSettings(folder + "settings.hdf")
+    # numpy data analysis to graphs
     for s in single_var:
         data.single_result_analysis(s)
-    # data.multi_result_analysis(multi_var)
+    data.multi_result_analysis(multi_var)
 
+    # clear saved numpy data
+    # clear_script_data()
+
+    # /lib64/mpich/bin/mpiexec -n 32 ./iPIC3D inputfiles/file_name.inp
 
     ploting.plot_all_graphs()
 

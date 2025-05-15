@@ -1,6 +1,6 @@
 {
-  "result_folder": "../res_data_vth/beam02/data/",
-  "output_folder": "../res_data_vth/beam02/result_new_scr/",
+  "result_folder": "../res_data_vth/beam_many_part002/data/",
+  "output_folder": "../res_data_vth/beam_many_part002/result/",
   "save_graphs": "True",
   "FieldOutputCycle": 10,
   "ParticleOutputCycle": 5000,

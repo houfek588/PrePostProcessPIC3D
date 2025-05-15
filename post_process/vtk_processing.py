@@ -102,7 +102,7 @@ def result_analysis(set_data):
     category = name_split[0] if name_split else ""
     axis = name_split[1] if len(name_split) > 1 else "x"
 
-    print(f"category: {category}, axis: {axis}")
+    print(f"data quatity to analyze: {category}, specification: {axis}")
 
     # Mapping for known vector fields
     field_map = {"Efield": "E", "Bfield": "B"}
@@ -134,7 +134,7 @@ def result_analysis(set_data):
         "Ji": "ion_current",
     }
 
-    print(f"is vector data? {pic_data.is_vector()}")
+    print(f"Are data in vector format: {pic_data.is_vector()}")
 
     # Reconstruct the set_data string based on whether it's a vector field
     if pic_data.is_vector():

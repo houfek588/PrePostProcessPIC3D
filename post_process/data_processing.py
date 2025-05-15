@@ -19,11 +19,13 @@ g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density
 g_pic_units = ["om_i ", "??", "4pi", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??"]
 g_si_units = ["V/m ", "T", "1", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J", "J", "J"]
 g_type_data = ["field ", "field", "field", "field", "field", "field", "field", "part", "part", "part", "part", "field", "field", "field"]
+g_weights = [1, 1, 1, 1, 1, 1, 1, 1, 0.99, 1, 0.01, 1, 1, 1]
 
 g_axis_name = {key: g_names[i] for i, key in enumerate(g_keys)}
 g_axis_si_units = {key: g_si_units[i] for i, key in enumerate(g_keys)}
 g_axis_pic_units = {key: g_pic_units[i] for i, key in enumerate(g_keys)}
 g_axis_type = {key: g_type_data[i] for i, key in enumerate(g_keys)}
+g_hist_weights = {key: g_weights[i] for i, key in enumerate(g_keys)}
 
 
 class ReadNMPFileData:
@@ -58,11 +60,11 @@ class ReadNMPFileData:
 
     def get_time_axis(self):
 
-        with open("parameters_hdf5.json", "r") as file:
+        with open("config.json", "r") as file:
             parameters = json.load(file)
 
         # read parameters to variables
-        folder = parameters["folder"]
+        folder = parameters["result_folder"]
         setting = read.ReadHDFSettings(folder + "settings.hdf")
         dt = setting.get_time_step_size()
         step = read_step_size(self.type)
@@ -96,6 +98,7 @@ def single_result_analysis(set_data):
         graph_energy(numpy_data, set_data, "val", "si")
     else:
         graph_for_pos_value(numpy_data, set_data, 0.5, "val_ms", "si")
+        graph2d(numpy_data, set_data, "db")
         graph2d_fft_in_time(numpy_data, set_data)
         graph_fft2d(numpy_data, set_data)
     # function calls
@@ -112,6 +115,11 @@ def single_result_analysis(set_data):
 def multi_result_analysis(set_data: list):
     print(f"Multiple data for analysis: {set_data}")
 
+    if not set_data:
+        msg = f"The list is empty"
+        print(msg)
+        return msg
+
     numpy_data = [ReadNMPFileData(name) for name in set_data]
     # for i
     # numpy_data = ReadNMPFileData(set_data)
@@ -125,6 +133,8 @@ def multi_result_analysis(set_data: list):
     # graph2d(numpy_data, set_data)
     # graph2d_fft_in_time(numpy_data, set_data)
     # graph_fft2d(numpy_data, set_data)
+
+    return "Data was processed"
 
 def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id=""):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
@@ -196,7 +206,7 @@ def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", 
         return f"Type of data for graph: {res_type} is not implemented"
 
 
-def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si",user_id=""):
+def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id="", weights_on=True):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
 
         Args:
@@ -246,13 +256,21 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
 
     # print(int("abc"))
     data_labels = []
+    weights = []
     for i, s in enumerate(set_data):
         name = s.split("_")[0]
         try:
             second_name = int(s.split("_")[1])
             # z_axis_name = z_axis_name + '_' + str(second_name)
             # print(f"z_axis_name: {name}")
-            data_labels.append(f"{g_axis_name[name + '_' + str(second_name)]}")
+            two_part_name = name + '_' + str(second_name)
+            data_labels.append(f"{g_axis_name[two_part_name]}")
+
+            if weights_on:
+                print(f"add weights {g_hist_weights[two_part_name]} to {two_part_name}")
+                weights.append([float(g_hist_weights[two_part_name]) for _ in range(len(axis_z[0]))])
+            else:
+                weights.append([1.0 for _ in range(len(axis_z[0]))])
         except:
             print("except activated")
             data_labels.append(f"{g_axis_name[name]}")
@@ -279,12 +297,22 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
         ploting.plot_fft(axis_x, axis_z, description, save_graph, img_folder+fft_file_name)
     elif res_type == "hist":
+        # print(weights)
+        # if z_axis_name == "velocity_1":
+        #     weights = [0.99 for _ in range(len(axis_z[0]))]
+        # elif z_axis_name == "velocity_2":
+        #     weights = [1.0 for _ in range(len(axis_z[0]))]
+        # elif z_axis_name == "velocity_3":
+        #     weights = [0.01 for _ in range(len(axis_z[0]))]
+        # else:
+        #     weights = [1.0 for _ in range(len(axis_z[0]))]
+
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 3)} ms",
             axis_z_name, "Magnitude")
         description_hist.multidata_labels(data_labels)
-        ploting.plot_histogram(axis_z, 4096, description_hist, save_graph, img_folder+save_file_name)
+        ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
         description = ploting.PlotDescription(f"Cut data {title_set_data} for t = {round(calculation_time * 1000, 3)} ms",
@@ -510,7 +538,7 @@ def graph_fft2d(numpy_data, set_data, result_units = "db", user_id=""):
     # zz_c1 = [sublist[:len(sublist) // scale_x] for sublist in zz_c[:len(zz_c) // scale_t]]
 
 
-    print("PRINT FFT 2D")
+    # print("PRINT FFT 2D")
 
         # zz = np.abs(E_fft_shifted)
     # tt = ky_shifted
@@ -536,7 +564,7 @@ def graph_fft2d(numpy_data, set_data, result_units = "db", user_id=""):
     # zz_mem = [sublist[:len(sublist) // scale_x] for sublist in zz_c]
     res_axis_z = positive_semi_space_z[:len(positive_semi_space_z) // scale_t]
 
-    descr3D = ploting.PlotDescription(r"$FFT~2D~result~of~E_x$", fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
+    descr3D = ploting.PlotDescription(fr"$FFT~2D~result~of~{set_data}$", fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
                                           fr"$Frequency~~[{extract_unit_from_label(label_y)}]$",
                                           "Magnitude")
         # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
@@ -573,9 +601,9 @@ def graph_energy(numpy_data, set_data, res_type = "val", units="si", user_id="")
 # --------------------------------------------------------------------------------------------
 #                                   HELP FUNCTIONS
 def convert_x_axis(axis_x, units="si"):
-    with open("parameters_hdf5.json", "r") as file:
+    with open("config.json", "r") as file:
         parameters = json.load(file)
-    setting = read.ReadHDFSettings(parameters["folder"] + "settings.hdf")
+    setting = read.ReadHDFSettings(parameters["result_folder"] + "settings.hdf")
     nx = setting.get_num_cells("x")
     Lx = setting.get_box_size("x")
 

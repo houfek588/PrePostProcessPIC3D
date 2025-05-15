@@ -121,7 +121,19 @@ class particles_parameters:
     def get_temp_in_ev(self):
         return self.temp
 
-    def get_concetration(self):
+    def get_concetration(self, nx, Lx):
+        print(f"nx: {nx}")
+        print(f"Lx: {Lx}")
+
+        ax = pow(self.conc, 1/3)
+        cell_size = Lx/nx
+
+        part = cell_size*ax
+
+        print(f"ax: {ax}")
+        print(f"cell_size: {cell_size}")
+        print(f"part: {part}")
+
         return self.conc
 
     def get_temp_in_kelvin(self):
@@ -270,18 +282,18 @@ def print_results(file = None):
     print("\nbackground proton parameters:", file=file)
     print("\tthermal velocity: \t" + str(c1.velocity_SI_to_sim(ion.get_thermal_velocity())), file=file)
     print("\tdrift velocity: \t" + str(0), file=file)
-    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(ion.get_concetration())), file=file)
+    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(ion.get_concetration(nx,ion_skin_i))), file=file)
 
     print("\nbackground electron parameters:", file=file)
     print("\tthermal velocity: \t" + str(c1.velocity_SI_to_sim(electron.get_thermal_velocity())), file=file)
     print("\tdrift velocity: \t" + str(0), file=file)
-    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(electron.get_concetration())), file=file)
+    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(electron.get_concetration(nx,ion_skin_i))), file=file)
 
     print("\nbeam electron parameters:", file=file)
     print("\tthermal velocity: \t" + str(c1.velocity_SI_to_sim(electron_beam.get_thermal_velocity())), file=file)
     print("\tdrift velocity: \t" + str(c1.velocity_SI_to_sim(beam_velocity)), file=file)
     # print("\tdrift velocity: \t" + str(0) + " ???", file=file)
-    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(electron_beam.get_concetration())), file=file)
+    print("\tdensity: \t\t\t" + str(c1.density_SI_to_sim(electron_beam.get_concetration(nx,ion_skin_i))), file=file)
 
 
     print(str_line, file=file)

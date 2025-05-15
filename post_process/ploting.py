@@ -56,10 +56,10 @@ def plot_data(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, 
 
 
     if descr.y_max == 0 and descr.y_min == 0:
-        print("y limits dont used")
+        # print("y limits dont used")
         pass
     else:
-        print(f"y limits ({descr.y_min}, {descr.y_max})")
+        print(f"graph plot {descr.title}: y limits ({descr.y_min}, {descr.y_max})")
         plt.ylim(descr.y_min, descr.y_max)
 
     if save_to_file:
@@ -211,7 +211,7 @@ def plot_fft(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, f
                       file_name)
 
 
-def plot_histogram(dataX, levels, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
+def plot_histogram(dataX, levels, descr: PlotDescription, weights, save_to_file: bool = False, file_name="plot.png"):
     """
     Plots nodal accelerations from acceleration data.
 
@@ -225,11 +225,11 @@ def plot_histogram(dataX, levels, descr: PlotDescription, save_to_file: bool = F
     if len(dataX) < 5:
         for i in range(0, len(dataX)):
             data_label = descr.data_labels[i]
-            plt.hist(dataX[i], bins=levels, label=data_label)
+            plt.hist(dataX[i], bins=levels, label=data_label, weights=weights[i])
             # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
         multiple_data = True
     else:
-        plt.hist(dataX, bins=levels)
+        plt.hist(dataX, bins=levels, weights=weights)
         # plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
     # plt.hist(dataX, bins=levels)
 
@@ -244,10 +244,10 @@ def plot_histogram(dataX, levels, descr: PlotDescription, save_to_file: bool = F
 
 
     if descr.y_max == 0 and descr.y_min == 0:
-        print("y limits dont used")
+        # print("y limits dont used")
         pass
     else:
-        print(f"y limits ({descr.y_min}, {descr.y_max})")
+        print(f"graph plot {descr.title}: y limits ({descr.y_min}, {descr.y_max})")
         plt.ylim(descr.y_min, descr.y_max)
 
     if save_to_file:
