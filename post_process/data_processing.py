@@ -1,3 +1,4 @@
+import math
 
 import numpy as np
 import json
@@ -6,7 +7,8 @@ import unit_convert
 import pre_process.unit_input as unit
 from post_process.vtk_processing import read_step_size
 import post_process.read_files as read
-
+from distutils.util import strtobool
+import win as w
 
 
 # print(d[0][0])
@@ -88,28 +90,76 @@ class ReadNMPFileData:
         return axis_x
 
 
+class ReadPlotConfig:
+    def __init__(self, config_file):
+        with open(config_file) as f:
+            a = f.read()
+
+        self.cfg = json.loads(a)
+
+    def get_single_value(self):
+        return bool(strtobool(self.cfg["single"][w.g_single_config_names[0]]))
+
+    def get_single_fft(self):
+        return bool(strtobool(self.cfg["single"][w.g_single_config_names[1]]))
+
+    def get_single_hist(self):
+        return bool(strtobool(self.cfg["single"][w.g_single_config_names[2]]))
+
+    def get_single_value2d(self):
+        return bool(strtobool(self.cfg["single"][w.g_single_config_names[3]]))
+
+    def get_single_fft2d(self):
+        return bool(strtobool(self.cfg["single"][w.g_single_config_names[4]]))
+
+    def get_single_fft_in_time(self):
+        return bool(strtobool(self.cfg["single"][w.g_single_config_names[5]]))
+
+    def get_multi_value(self):
+        return bool(strtobool(self.cfg["multi"][w.g_multi_config_names[0]]))
+
+    def get_multi_fft(self):
+        return bool(strtobool(self.cfg["multi"][w.g_multi_config_names[1]]))
+
+    def get_multi_hist(self):
+        return bool(strtobool(self.cfg["multi"][w.g_multi_config_names[2]]))
+
+
 def single_result_analysis(set_data):
 
     print(f"Single data for analysis: {set_data}")
 
     numpy_data = ReadNMPFileData(set_data)
+    plot_cfg = ReadPlotConfig("plot_config.json")
+    # config = plot_cfg.get_single_plot_config()
 
     if numpy_data.get_data_dimension() == 1:
-        graph_energy(numpy_data, set_data, "val", "si")
-    else:
-        graph_for_pos_value(numpy_data, set_data, 0.5, "val_ms", "si")
-        graph2d(numpy_data, set_data, "db")
-        graph2d_fft_in_time(numpy_data, set_data)
-        graph_fft2d(numpy_data, set_data)
-    # function calls
-    # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
-    # graph_for_pos_value(numpy_data, set_data, 1, "val_ms", "si")
-    # graph_for_time_value(numpy_data, set_data, 1, True)
-    # graph2d(numpy_data, set_data)
-    # graph2d_fft_in_time(numpy_data, set_data)
-    # graph_fft2d(numpy_data, set_data)
+        if plot_cfg.get_single_value():
+            graph_energy(numpy_data, set_data, "val", "db")
 
-    #
+        if plot_cfg.get_single_fft():
+            graph_energy(numpy_data, set_data, "fft", "db")
+
+        if plot_cfg.get_single_hist():
+            graph_energy(numpy_data, set_data, "hist", "db")
+    else:
+        if plot_cfg.get_single_value():
+            graph_for_pos_value(numpy_data, set_data, 0.5, "val", "db")
+
+        if plot_cfg.get_single_fft():
+            graph_for_pos_value(numpy_data, set_data, 0.5, "fft", "db")
+
+        if plot_cfg.get_single_hist():
+            graph_for_pos_value(numpy_data, set_data, 0.5, "hist", "db")
+
+        if plot_cfg.get_single_value2d():
+            graph2d(numpy_data, set_data, "db")
+
+        if plot_cfg.get_single_fft2d():
+            graph_fft2d(numpy_data, set_data)
+
+        if plot_cfg.get_single_fft_in_time():
+            graph2d_fft_in_time(numpy_data, set_data)
 
 
 def multi_result_analysis(set_data: list):
@@ -121,20 +171,36 @@ def multi_result_analysis(set_data: list):
         return msg
 
     numpy_data = [ReadNMPFileData(name) for name in set_data]
+    plot_cfg = ReadPlotConfig("plot_config.json")
     # for i
     # numpy_data = ReadNMPFileData(set_data)
 
-    # graph_multi_time_value(numpy_data[0], set_data[0], 1, "hist", "pic")
-    graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0")
-    graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1")
-    # function calls
-    # graph_for_time_value(numpy_data, set_data, 0, "hist", "pic")
-    # graph_for_time_value(numpy_data, set_data, 1, True)
-    # graph2d(numpy_data, set_data)
-    # graph2d_fft_in_time(numpy_data, set_data)
-    # graph_fft2d(numpy_data, set_data)
+    # graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=False)
+    # graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=False)
+    #
+    # graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=False, merge=True)
+    # graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=False, merge=True)
+
+    # graph_multi_time_value(numpy_data, set_data, 0, "val", "pic", user_id="_T0", weights_on=False)
+    # graph_multi_time_value(numpy_data, set_data, 1, "val", "pic", user_id="_T1", weights_on=False)
+    #
+    # graph_multi_time_value(numpy_data, set_data, 0, "fft", "pic", user_id="_T0", weights_on=False)
+    # graph_multi_time_value(numpy_data, set_data, 1, "fft", "pic", user_id="_T1", weights_on=False)
+
+    if plot_cfg.get_single_value():
+        graph_multi_time_value(numpy_data, set_data, 0, "val", "pic", user_id="_T0")
+        graph_multi_time_value(numpy_data, set_data, 1, "val", "pic", user_id="_T1")
+
+    if plot_cfg.get_single_fft():
+        graph_multi_time_value(numpy_data, set_data, 0, "fft", "pic", user_id="_T0")
+        graph_multi_time_value(numpy_data, set_data, 1, "fft", "pic", user_id="_T1")
+
+    if plot_cfg.get_single_hist():
+        graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=False)
+        graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=False)
 
     return "Data was processed"
+
 
 def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id=""):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
@@ -206,7 +272,7 @@ def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", 
         return f"Type of data for graph: {res_type} is not implemented"
 
 
-def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id="", weights_on=True):
+def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id="", weights_on=True, merge=False):
     """Generates a graph for a given dataset at a specific time with optional FFT analysis.
 
         Args:
@@ -268,9 +334,11 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
 
             if weights_on:
                 print(f"add weights {g_hist_weights[two_part_name]} to {two_part_name}")
-                weights.append([float(g_hist_weights[two_part_name]) for _ in range(len(axis_z[0]))])
+                weights.append([float(g_hist_weights[two_part_name]) for _ in range(len(axis_z[i]))])
             else:
-                weights.append([1.0 for _ in range(len(axis_z[0]))])
+                weights.append([1.0 for _ in range(len(axis_z[i]))])
+
+
         except:
             print("except activated")
             data_labels.append(f"{g_axis_name[name]}")
@@ -294,29 +362,32 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
         description = ploting.PlotDescription(
             f"Frequency Spectrum for {title_set_data}; t = {round(calculation_time * 1000, 1)} ms",
             fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
+        description.multidata_labels(data_labels)
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
         ploting.plot_fft(axis_x, axis_z, description, save_graph, img_folder+fft_file_name)
     elif res_type == "hist":
-        # print(weights)
-        # if z_axis_name == "velocity_1":
-        #     weights = [0.99 for _ in range(len(axis_z[0]))]
-        # elif z_axis_name == "velocity_2":
-        #     weights = [1.0 for _ in range(len(axis_z[0]))]
-        # elif z_axis_name == "velocity_3":
-        #     weights = [0.01 for _ in range(len(axis_z[0]))]
-        # else:
-        #     weights = [1.0 for _ in range(len(axis_z[0]))]
-
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 3)} ms",
             axis_z_name, "Magnitude")
         description_hist.multidata_labels(data_labels)
-        ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, img_folder+save_file_name)
+
+        if merge:
+            merged = np.concatenate(axis_z, axis=None)
+            weights = [1.0 for _ in range(len(merged))]
+
+            for a in axis_z:
+                print(f"len: {len(a)}")
+            print(f"merged len: {len(merged)}")
+            save_file_name = "merged_" + save_file_name
+            ploting.plot_histogram(merged, 4096, description_hist, weights, save_graph, img_folder + save_file_name)
+        else:
+            ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
         description = ploting.PlotDescription(f"Cut data {title_set_data} for t = {round(calculation_time * 1000, 3)} ms",
                                           label_x, axis_z_name)
+        description.multidata_labels(data_labels)
         ploting.plot_data(axis_x, axis_z, description, save_graph, img_folder+save_file_name)
     else:
         return f"Type of data for graph: {res_type} is not implemented"
@@ -390,11 +461,14 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si", u
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
         ploting.plot_fft(axis_t, axis_z, description, save_graph, img_folder+fft_file_name)
     elif res_type == "hist":
+        weights = [1.0 for _ in range(len(axis_z))]
+        # weights.append([1.0 for _ in range(len(axis_z))])
+
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {set_data}; x = {round(calculation_time , 1)} m",
             axis_z_name, "Magnitude")
-        ploting.plot_histogram(axis_z, 4096, description_hist, save_graph, img_folder+save_file_name)
+        ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
         description = ploting.PlotDescription(f"Cut data {set_data} for x = {round(calculation_time, 3)} m",
@@ -555,14 +629,17 @@ def graph_fft2d(numpy_data, set_data, result_units = "db", user_id=""):
     # print(f"plane xt: {len(xx_c)} x {len(tt_c)}")
     # print(f"data plane: {len(zz_c[0])} x {len(zz_c)}")
 
-    scale_x = 40
-    scale_t = 200
-    scale_z = 4
+    # scale_x = 40
+    # scale_t = 200
+    # scale_z = 4
+    scale_x = 1
+    scale_t = 1
+    scale_z = 1
 
     res_axis_x = positive_semi_space_x[:len(positive_semi_space_x) // scale_x]
     res_axis_y = positive_semi_space_y[:len(positive_semi_space_y) // scale_t]
     # zz_mem = [sublist[:len(sublist) // scale_x] for sublist in zz_c]
-    res_axis_z = positive_semi_space_z[:len(positive_semi_space_z) // scale_t]
+    res_axis_z = positive_semi_space_z[:len(positive_semi_space_z) // scale_z]
 
     descr3D = ploting.PlotDescription(fr"$FFT~2D~result~of~{set_data}$", fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
                                           fr"$Frequency~~[{extract_unit_from_label(label_y)}]$",
@@ -592,8 +669,7 @@ def graph_energy(numpy_data, set_data, res_type = "val", units="si", user_id="")
         description = ploting.PlotDescription(f"Time development {g_axis_name[set_data]}", label_t, axis_z_name)
         ploting.plot_data(axis_t, axis_z, description, save_graph, img_folder + save_file_name)
     else:
-        return f"Type of data for graph: {res_type} is not implemented"
-
+        raise Exception(f"Type of data for graph: {res_type} is not implemented")
 
 
 # --------------------------------------------------------------------------------------------
@@ -638,8 +714,9 @@ def convert_t_axis(axis_time, units="si"):
             return [axis_time_SI, unit_y]
         case "db":
             axis_time_SI = unit_convert.rescale_list(axis_time, 1 / unit.ion.get_plasma_frequency())
-            axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency())
-            unit_y = r"$Time~~[1/\omega_{pe}]$"
+            axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency()/(2*math.pi))
+            # unit_y = r"$Time~~[1/\omega_{pe}]$"
+            unit_y = r"$Time~~[1/f_{pe}]$"
             return [axis_time_OM, unit_y]
         case _:
             return f"Invalid unit type: {units}"

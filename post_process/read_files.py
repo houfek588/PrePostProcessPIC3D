@@ -246,12 +246,10 @@ class ReadVTKFilesData:
             """
         return self.data_x_t
 
-
     def get_data_name(self):
         """Gets the name of the data from the first file."""
         mesh = pv.read(self.file_paths[0])
         return mesh.point_data.keys()[0]
-
 
     def get_len_data(self, L):
         """

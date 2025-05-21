@@ -130,6 +130,7 @@ def result_analysis(set_data):
         "Bfield": "Bfield",
         "rhoe0": "rhoe0",
         "rhoi1": "rhoi1",
+        "rhoe2": "rhoe2",
         "Je": "electron_current",
         "Ji": "ion_current",
     }

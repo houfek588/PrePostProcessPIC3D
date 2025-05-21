@@ -5,6 +5,9 @@ import post_process.data_processing as data
 import os
 import json
 
+g_available = ["Efield_x", "Efield_y", "Efield_z", "rhoe0", "rhoi1", "rhoe2", "velocity_1", "velocity_2",
+             "velocity_3", "energy_kin", "energy_ele"]
+
 def check_saved_data(var):
     script_data_folder = "script_data"
     if any(os.listdir(script_data_folder)):  # Check if folder contains any files or subfolders
@@ -41,7 +44,6 @@ def check_saved_data(var):
             hdf.result_analysis(var)
         print("Data loaded")
 
-
 def clear_script_data():
     # Load configuration from JSON file
     with open("config.json", "r") as file:
@@ -60,36 +62,17 @@ def clear_script_data():
             os.remove(file_path)
             print(f"deleted: {file_path}")
 
+def data_process(single_var, multi_var):
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-
-
-    # 1) read setting file
-    # 2) check if numpy data
-    #     2.1) save numpy data from vtk if not
-    #     2.2) save numpy data from hdf5 if not
-    # 3) generate graphs
-
-    # ns = 3
-    # FieldOutputTag = B + E
-    # MomentsOutputTag = rho
-    # ParticlesOutputTag = position + velocity
-
-    ns = 3
-    field_output_E = True
-    field_output_Ji = False
-    par_output_velocity = True
-
-    multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
+    # multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
+    # multi_var = ["velocity_1_x", "velocity_3_x"]
     # multi_var = []
-    single_var = ["Efield_x", "rhoe0", "energy_ele"]
+    # single_var = ["Efield_x", "rhoe0", "energy_ele"]
+    # single_var = ["Efield_x", "energy_ele"]
+    # single_var = []
     # 'rho_e'
-    all = multi_var+single_var
+    all = multi_var + single_var
 
-    # all = ["Efield_x"]
-    # single_var = all
-    # var = vars[6]
     print(f">> chosen data: {all}")
 
     for one in all:
@@ -108,5 +91,64 @@ if __name__ == '__main__':
     ploting.plot_all_graphs()
 
     print("ANALYSING DONE")
+
+def save_json(json_data, file_name: str = "confin.json"):
+    with open(file_name, "w") as f:
+        f.write(json_data)
+    print(f"Configuration succesfully writen into {file_name}")
+
+def save_config(result_folder, output_folder, save_graphs, FieldOutputCycle, ParticleOutputCycle, NumberHdfFiles):
+    data = {
+        "result_folder": result_folder,
+        "output_folder": output_folder,
+        "save_graphs": str(save_graphs),
+        "FieldOutputCycle": FieldOutputCycle,
+        "ParticleOutputCycle": ParticleOutputCycle,
+        "NumberHdfFiles": NumberHdfFiles
+    }
+
+    json_data = json.dumps(data)
+    file_name = "config.json"
+    save_json(json_data, file_name)
+
+
+def save_plot_config(options_single, options_multi):
+    print(f"options_single: {options_single}")
+    print(f"options_multi: {options_multi}")
+
+
+    data = {
+        "single": options_single,
+        "multi": options_multi,
+    }
+
+    json_data = json.dumps(data)
+    file_name = "plot_config.json"
+    save_json(json_data, file_name)
+
+
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
+
+
+    # 1) read setting file
+    # 2) check if numpy data
+    #     2.1) save numpy data from vtk if not
+    #     2.2) save numpy data from hdf5 if not
+    # 3) generate graphs
+
+
+    # multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
+    # multi_var = ["velocity_1_x", "velocity_3_x"]
+    multi_var = []
+    # single_var = ["Efield_x", "rhoe0", "energy_ele"]
+    # single_var = ["Efield_x", "energy_ele"]
+    single_var = ["rhoe2"]
+    # single_var = []
+    # 'rho_e'
+
+    data_process(single_var, multi_var)
+
+    # data.ReadPlotConfig("plot_config.json")
 
 

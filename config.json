@@ -1,8 +1,1 @@
-{
-  "result_folder": "../res_data_vth/beam_many_part002/data/",
-  "output_folder": "../res_data_vth/beam_many_part002/result/",
-  "save_graphs": "True",
-  "FieldOutputCycle": 10,
-  "ParticleOutputCycle": 5000,
-  "NumberHdfFiles": 32
-}
+{"result_folder": "../res_data_vth/beam_long_time15/data/", "output_folder": "../res_data_vth/beam_long_time15/result/", "save_graphs": "True", "FieldOutputCycle": 10, "ParticleOutputCycle": 5000, "NumberHdfFiles": 32}
