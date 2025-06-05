@@ -518,7 +518,7 @@ if __name__ == '__main__':
         print(math.fabs(k * debye_len) ** 3)
         gg = -math.sqrt(math.pi / 8) * (om_p_e / (math.fabs(k * debye_len) ** 3)) * math.exp(
             (-1 / (2 * (k * debye_len) ** 2)) - 3 / 2)
-
+        print(f"gg: {gg}")
         o.append(math.sqrt(omm) / om_p_e)
         kk.append(k * debye_len)
         gam.append(-gg / om_p_e)

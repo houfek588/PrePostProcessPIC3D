@@ -21,7 +21,8 @@ g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density
 g_pic_units = ["om_i ", "??", "4pi", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??"]
 g_si_units = ["V/m ", "T", "1", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J", "J", "J"]
 g_type_data = ["field ", "field", "field", "field", "field", "field", "field", "part", "part", "part", "part", "field", "field", "field"]
-g_weights = [1, 1, 1, 1, 1, 1, 1, 1, 0.99, 1, 0.01, 1, 1, 1]
+g_weights = [1, 1, 1, 1, 1, 1, 1, 1, 0.99, 1, 0.5, 1, 1, 1]
+
 
 g_axis_name = {key: g_names[i] for i, key in enumerate(g_keys)}
 g_axis_si_units = {key: g_si_units[i] for i, key in enumerate(g_keys)}
@@ -124,6 +125,9 @@ class ReadPlotConfig:
     def get_multi_hist(self):
         return bool(strtobool(self.cfg["multi"][w.g_multi_config_names[2]]))
 
+    def __str__(self):
+        return str(self.cfg)
+
 
 def single_result_analysis(set_data):
 
@@ -144,13 +148,13 @@ def single_result_analysis(set_data):
             graph_energy(numpy_data, set_data, "hist", "db")
     else:
         if plot_cfg.get_single_value():
-            graph_for_pos_value(numpy_data, set_data, 0.5, "val", "db")
+            graph_for_pos_value(numpy_data, set_data, 0.408, "val", "db")
 
         if plot_cfg.get_single_fft():
-            graph_for_pos_value(numpy_data, set_data, 0.5, "fft", "db")
+            graph_for_pos_value(numpy_data, set_data, 0.408, "fft", "db")
 
         if plot_cfg.get_single_hist():
-            graph_for_pos_value(numpy_data, set_data, 0.5, "hist", "db")
+            graph_for_pos_value(numpy_data, set_data, 0.408, "hist", "db")
 
         if plot_cfg.get_single_value2d():
             graph2d(numpy_data, set_data, "db")
@@ -160,6 +164,8 @@ def single_result_analysis(set_data):
 
         if plot_cfg.get_single_fft_in_time():
             graph2d_fft_in_time(numpy_data, set_data)
+
+    print("Single Data was processed")
 
 
 def multi_result_analysis(set_data: list):
@@ -187,19 +193,29 @@ def multi_result_analysis(set_data: list):
     # graph_multi_time_value(numpy_data, set_data, 0, "fft", "pic", user_id="_T0", weights_on=False)
     # graph_multi_time_value(numpy_data, set_data, 1, "fft", "pic", user_id="_T1", weights_on=False)
 
-    if plot_cfg.get_single_value():
+    if plot_cfg.get_multi_value():
         graph_multi_time_value(numpy_data, set_data, 0, "val", "pic", user_id="_T0")
         graph_multi_time_value(numpy_data, set_data, 1, "val", "pic", user_id="_T1")
 
-    if plot_cfg.get_single_fft():
+    if plot_cfg.get_multi_fft():
         graph_multi_time_value(numpy_data, set_data, 0, "fft", "pic", user_id="_T0")
         graph_multi_time_value(numpy_data, set_data, 1, "fft", "pic", user_id="_T1")
 
-    if plot_cfg.get_single_hist():
-        graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=False)
-        graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=False)
+    if plot_cfg.get_multi_hist():
+        graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=True, merge=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.1, "hist", "pic", user_id="_T01", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.2, "hist", "pic", user_id="_T02", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.3, "hist", "pic", user_id="_T03", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.4, "hist", "pic", user_id="_T04", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.5, "hist", "pic", user_id="_T05", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.6, "hist", "pic", user_id="_T06", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.7, "hist", "pic", user_id="_T07", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.8, "hist", "pic", user_id="_T08", weights_on=False)
+        # graph_multi_time_value(numpy_data, set_data, 0.9, "hist", "pic", user_id="_T09", weights_on=False)
+        graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=True, merge=False)
 
-    return "Data was processed"
+    print("Multi Data was processed")
+    return "Multi Data was processed"
 
 
 def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id=""):
@@ -261,7 +277,7 @@ def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", 
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {set_data}; t = {round(calculation_time * 1000, 1)} ms",
-            axis_z_name, "Magnitude")
+            axis_z_name, "f(u)")
         ploting.plot_histogram(axis_z, 4096, description_hist, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
@@ -299,7 +315,6 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
         parameters = json.load(file)
     img_folder = parameters["output_folder"]
     save_graph = parameters["save_graphs"]
-
 
     # Determine the time index (x_level)
     if T > 1 or T < 0:
@@ -369,8 +384,10 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 3)} ms",
-            axis_z_name, "Magnitude")
+            axis_z_name, "f(u)")
         description_hist.multidata_labels(data_labels)
+        description_hist.set_xlim(-0.03, 0.03)
+        description_hist.set_ylim(0, 250)
 
         if merge:
             merged = np.concatenate(axis_z, axis=None)
@@ -629,17 +646,32 @@ def graph_fft2d(numpy_data, set_data, result_units = "db", user_id=""):
     # print(f"plane xt: {len(xx_c)} x {len(tt_c)}")
     # print(f"data plane: {len(zz_c[0])} x {len(zz_c)}")
 
-    # scale_x = 40
-    # scale_t = 200
-    # scale_z = 4
-    scale_x = 1
-    scale_t = 1
-    scale_z = 1
+    scale_x = 40
+    scale_t = 50
+    scale_z = 50
+    # scale_x = 1
+    # scale_t = 1
+    # scale_z = 60
 
-    res_axis_x = positive_semi_space_x[:len(positive_semi_space_x) // scale_x]
-    res_axis_y = positive_semi_space_y[:len(positive_semi_space_y) // scale_t]
-    # zz_mem = [sublist[:len(sublist) // scale_x] for sublist in zz_c]
-    res_axis_z = positive_semi_space_z[:len(positive_semi_space_z) // scale_z]
+    # res_axis_x = positive_semi_space_x[:len(positive_semi_space_x) // scale_x]
+    # res_axis_y = positive_semi_space_y[:len(positive_semi_space_y) // scale_t]
+    # res_axis_z = positive_semi_space_z[:len(positive_semi_space_z) // scale_z]
+    # res_axis_z = positive_semi_space_z[:len(positive_semi_space_z)]
+
+    scale_x = 0.05
+    scale_t = 0.02
+
+    res_axis_x = positive_semi_space_x[:int(len(positive_semi_space_x)*scale_x)]
+    res_axis_y = positive_semi_space_y[:int(len(positive_semi_space_y)*scale_t)]
+    res_axis_z = []
+    for z in range(0, int(len(positive_semi_space_z)*scale_t)):
+        res_axis_z.append(positive_semi_space_z[z][:int(len(positive_semi_space_z[z])*scale_x)])
+
+    # res_axis_x = positive_semi_space_x
+    # res_axis_y = positive_semi_space_y
+    # res_axis_z = positive_semi_space_z
+
+    print(f"res_axis_z[0]: {res_axis_z[0]}")
 
     descr3D = ploting.PlotDescription(fr"$FFT~2D~result~of~{set_data}$", fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
                                           fr"$Frequency~~[{extract_unit_from_label(label_y)}]$",
@@ -714,8 +746,10 @@ def convert_t_axis(axis_time, units="si"):
             return [axis_time_SI, unit_y]
         case "db":
             axis_time_SI = unit_convert.rescale_list(axis_time, 1 / unit.ion.get_plasma_frequency())
-            axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency()/(2*math.pi))
+            # axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency())
             # unit_y = r"$Time~~[1/\omega_{pe}]$"
+
+            axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency() / (2 * math.pi))
             unit_y = r"$Time~~[1/f_{pe}]$"
             return [axis_time_OM, unit_y]
         case _:

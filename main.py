@@ -92,7 +92,7 @@ def data_process(single_var, multi_var):
 
     print("ANALYSING DONE")
 
-def save_json(json_data, file_name: str = "confin.json"):
+def save_json(json_data, file_name: str = "config.json"):
     with open(file_name, "w") as f:
         f.write(json_data)
     print(f"Configuration succesfully writen into {file_name}")
@@ -139,16 +139,15 @@ if __name__ == '__main__':
 
 
     # multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
-    # multi_var = ["velocity_1_x", "velocity_3_x"]
-    multi_var = []
+    multi_var = ["velocity_3_x", "velocity_1_x"]
+    # multi_var = []
     # single_var = ["Efield_x", "rhoe0", "energy_ele"]
     # single_var = ["Efield_x", "energy_ele"]
-    single_var = ["rhoe2"]
-    # single_var = []
+    # single_var = ["rhoe2"]
+    single_var = []
     # 'rho_e'
 
     data_process(single_var, multi_var)
-
     # data.ReadPlotConfig("plot_config.json")
 
 

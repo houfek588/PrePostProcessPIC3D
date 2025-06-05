@@ -12,12 +12,18 @@ class PlotDescription:
 
         self.y_max = 0
         self.y_min = 0
+        self.x_max = 0
+        self.x_min = 0
         self.num_lines = 0
         self.data_labels = []
 
     def set_ylim(self, minimum, maximum):
         self.y_max = maximum
         self.y_min = minimum
+
+    def set_xlim(self, minimum, maximum):
+        self.x_max = maximum
+        self.x_min = minimum
 
     def set_num_graphs(self, num_lines):
         self.num_lines = num_lines
@@ -226,6 +232,7 @@ def plot_histogram(dataX, levels, descr: PlotDescription, weights, save_to_file:
         for i in range(0, len(dataX)):
             data_label = descr.data_labels[i]
             plt.hist(dataX[i], bins=levels, label=data_label, weights=weights[i])
+            # plt.hist(dataX[i], bins=levels, label=data_label)
             # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
         multiple_data = True
     else:
@@ -249,6 +256,13 @@ def plot_histogram(dataX, levels, descr: PlotDescription, weights, save_to_file:
     else:
         print(f"graph plot {descr.title}: y limits ({descr.y_min}, {descr.y_max})")
         plt.ylim(descr.y_min, descr.y_max)
+
+    if descr.x_max == 0 and descr.x_min == 0:
+        # print("y limits dont used")
+        pass
+    else:
+        print(f"graph plot {descr.title}: x limits ({descr.x_min}, {descr.x_max})")
+        plt.xlim(descr.x_min, descr.x_max)
 
     if save_to_file:
         # Save the plot to a file
