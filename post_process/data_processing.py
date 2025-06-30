@@ -14,14 +14,14 @@ import win as w
 # print(d[0][0])
 # print(a[0][0])
 g_keys = ["Efield", "Bfield", "rhoe0", "rhoi1", "rhoe2", "Je", "Ji", "velocity", "velocity_1", "velocity_2", "velocity_3",
-          "energy", "energy_kin", "energy_ele"]
+          "energy", "energy_kin", "energy_ele", "energy_kin0", "energy_kin1", "energy_kin2", "energy_total"]
 g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density", "Electron density", "Electron current density",
            "Ion current density", "Velocity", "Electron velocity", "Ion velocity", "El. beam velocity", "Energy", "Kin. energy",
-           "El. energy"]
-g_pic_units = ["om_i ", "??", "4pi", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??"]
-g_si_units = ["V/m ", "T", "1", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J", "J", "J"]
-g_type_data = ["field ", "field", "field", "field", "field", "field", "field", "part", "part", "part", "part", "field", "field", "field"]
-g_weights = [1, 1, 1, 1, 1, 1, 1, 1, 0.99, 1, 0.5, 1, 1, 1]
+           "El. energy", "Electron kin. energy", "Ion kin. energy", "Electron beam kin. energy", "Total energy"]
+g_pic_units = ["om_i ", "??", "4pi", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??", "??", "??", "??", "??"]
+g_si_units = ["V/m ", "T", "1", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J/m3", "J/m3", "J/m3", "J/m3", "J/m3", "J/m3", "J/m3"]
+g_type_data = ["field ", "field", "field", "field", "field", "field", "field", "part", "part", "part", "part", "field", "field", "field", "field", "field", "field", "field"]
+g_weights = [1, 1, 1, 1, 1, 1, 1, 1, 0.99, 1, 0.5, 1, 1, 1, 1, 1, 1, 1]
 
 
 g_axis_name = {key: g_names[i] for i, key in enumerate(g_keys)}
@@ -553,11 +553,11 @@ def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bo
     img_folder = parameters["output_folder"]
     save_graph = parameters["save_graphs"]
 
-    raw_axis_x, label_x = convert_x_axis(length_data, "si")
+    raw_axis_x, label_x = convert_x_axis(length_data, result_units)
 
     axis_z = []
     for level in range(0,len(var_data)):
-        raw_axis_z, label_z_unit = convert_z_axis(var_data[level], set_data, "si")
+        raw_axis_z, label_z_unit = convert_z_axis(var_data[level], set_data, result_units)
         fft_axis_x, fft_axis_z = fft_data_transform(raw_axis_x, raw_axis_z)
         axis_z.append(fft_axis_z)
 
@@ -574,7 +574,7 @@ def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bo
     # Define plot description
     descr3D = ploting.PlotDescription(f"Time development through space for {set_data}",
                                       fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", label_y, label_z)
-    descr3D.set_ylim(read.min_value(var_data), read.max_value(var_data))
+    # descr3D.set_ylim(read.min_value(var_data), read.max_value(var_data))
 
     # Plot and save the figure
     if wire_plot:
@@ -697,7 +697,8 @@ def graph_energy(numpy_data, set_data, res_type = "val", units="si", user_id="")
     z_axis_name = set_data
 
     if res_type == "val":
-        axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z[0]}]"
+        axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
+        # print(f"axis_z_name: {axis_z_name}")
         description = ploting.PlotDescription(f"Time development {g_axis_name[set_data]}", label_t, axis_z_name)
         ploting.plot_data(axis_t, axis_z, description, save_graph, img_folder + save_file_name)
     else:
@@ -747,10 +748,10 @@ def convert_t_axis(axis_time, units="si"):
         case "db":
             axis_time_SI = unit_convert.rescale_list(axis_time, 1 / unit.ion.get_plasma_frequency())
             # axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency())
-            # unit_y = r"$Time~~[1/\omega_{pe}]$"
+            unit_y = r"$Time~~[2\pi/\omega_{pe}]$"
 
             axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency() / (2 * math.pi))
-            unit_y = r"$Time~~[1/f_{pe}]$"
+            # unit_y = r"$Time~~[1/f_{pe}]$"
             return [axis_time_OM, unit_y]
         case _:
             return f"Invalid unit type: {units}"
@@ -764,6 +765,7 @@ def convert_z_axis(axis_y, set_data, units="si"):
         "m/s": unit.c1.vel_const,
         "V/m": unit.c1.e_field_const,
         "J": unit.c1.energy_const,
+        "J/m3": unit.c1.energy_const,
         "A/m": unit.c1.charge_const,
     }
     # print(f"convert_z_axis.variable: {variable}")
@@ -781,7 +783,7 @@ def convert_z_axis(axis_y, set_data, units="si"):
             else:
                 axis_z_data = axis_y  # fallback to original if unit not found
 
-            # print(f"unit_z SI: {unit_z}")
+            print(f"unit_z SI: {unit_z}")
             return [axis_z_data, unit_z]
         case _:
             return f"Invalid unit type: {units}"

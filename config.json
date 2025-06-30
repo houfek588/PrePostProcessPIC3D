@@ -1,1 +1,1 @@
-{"result_folder": "C:/Projects/Phd/res_data_vth/beam_hot_tenuous_few/data/", "output_folder": "C:/Projects/Phd/res_data_vth/beam_hot_tenuous_few/result/", "save_graphs": "True", "FieldOutputCycle": 10, "ParticleOutputCycle": 100000, "NumberHdfFiles": 32}
+{"result_folder": "C:/Projects/Phd/res_data_vth/beam_hot_tenuous_few/res_210525_ht_few/data/data/", "output_folder": "C:/Projects/Phd/res_data_vth/beam_hot_tenuous_few/result/", "save_graphs": "True", "FieldOutputCycle": 10, "ParticleOutputCycle": 100000, "NumberHdfFiles": 32}

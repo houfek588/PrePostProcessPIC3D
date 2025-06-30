@@ -645,8 +645,12 @@ class ReadConsData:
             "e_energy": ["", []],
             "b_energy": ["", []],
             "k_energy": ["", []],
-            "k_energy_spec": ["", []],
-            "bulk_energy_spec": ["", []]
+            "k_energy_spec0": ["", []],
+            "k_energy_spec1": ["", []],
+            "k_energy_spec2": ["", []],
+            "bulk_energy_spec0": ["", []],
+            "bulk_energy_spec1": ["", []],
+            "bulk_energy_spec2": ["", []]
         }
         keys = [
             "cycle",
@@ -656,14 +660,32 @@ class ReadConsData:
             "e_energy",
             "b_energy",
             "k_energy",
-            "k_energy_spec",
-            "bulk_energy_spec"
+            "k_energy_spec0",
+            "k_energy_spec1",
+            "k_energy_spec2",
+            "bulk_energy_spec0",
+            "bulk_energy_spec1",
+            "bulk_energy_spec2"
         ]
 
         with open(file_path, mode="r") as file:
             reader = csv.reader(file, delimiter="\t")
             for i, row in enumerate(reader):
+
                 if i == 0:  # Header row
+
+                    # Extract and parse the bulk title
+                    bulk_title = row.pop()
+                    bulk_base, spec = bulk_title.rstrip(")").split("(")
+
+                    # Extract and parse the kinetic title
+                    kin_title = row.pop()
+                    kin_base = kin_title.split("(")[0]
+
+                    # Extend the row with new titles
+                    row += [f"{kin_base}_{spec}{i}" for i in range(3)]
+                    row += [f"{bulk_base}_{spec}{i}" for i in range(3)]
+
                     for key, value in zip(keys, range(0, len(row))):
                         # print(f"key = {key}, value = {value}, row_val = {row[value]}")
                         if key:
@@ -685,11 +707,23 @@ class ReadConsData:
     def get_cycles(self):
         return self.data["cycle"]
 
+    def get_total_energy(self):
+        return self.data["total_energy"]
+
     def get_e_energy(self):
         return self.data["e_energy"]
 
     def get_k_energy(self):
         return self.data["k_energy"]
+
+    def get_k_spec0_energy(self):
+        return self.data["k_energy_spec0"]
+
+    def get_k_spec1_energy(self):
+        return self.data["k_energy_spec1"]
+
+    def get_k_spec2_energy(self):
+        return self.data["k_energy_spec2"]
 
 
 

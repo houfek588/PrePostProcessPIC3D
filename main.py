@@ -6,7 +6,7 @@ import os
 import json
 
 g_available = ["Efield_x", "Efield_y", "Efield_z", "rhoe0", "rhoi1", "rhoe2", "velocity_1", "velocity_2",
-             "velocity_3", "energy_kin", "energy_ele"]
+             "velocity_3", "energy_kin", "energy_ele", "energy_kin0", "energy_kin1", "energy_kin2", "energy_total"]
 
 def check_saved_data(var):
     script_data_folder = "script_data"
@@ -139,12 +139,12 @@ if __name__ == '__main__':
 
 
     # multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
-    multi_var = ["velocity_3_x", "velocity_1_x"]
-    # multi_var = []
+    # multi_var = ["velocity_3_x", "velocity_1_x"]
+    multi_var = []
     # single_var = ["Efield_x", "rhoe0", "energy_ele"]
-    # single_var = ["Efield_x", "energy_ele"]
-    # single_var = ["rhoe2"]
-    single_var = []
+    single_var = ["Efield_x", "energy_ele"]
+    # single_var = ["energy_total"]
+    # single_var = []
     # 'rho_e'
 
     data_process(single_var, multi_var)

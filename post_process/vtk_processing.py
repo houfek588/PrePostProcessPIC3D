@@ -174,6 +174,10 @@ def conserve_analysis(set_data):
     supported = {
         "energy_kin": energy_data.get_k_energy,
         "energy_ele": energy_data.get_e_energy,
+        "energy_kin0": energy_data.get_k_spec0_energy,
+        "energy_kin1": energy_data.get_k_spec1_energy,
+        "energy_kin2": energy_data.get_k_spec2_energy,
+        "energy_total": energy_data.get_total_energy
     }
 
     # Check if the requested data is available
