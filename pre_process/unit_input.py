@@ -4,12 +4,15 @@ import matplotlib.pyplot as plt
 # constants
 const_K_b = 1.380649*10**(-23)
 const_e = 1.602176634*10**(-19)
-# const_M_e = 9.1093837139*10**(-31)
+const_M_e = 9.1093837139*10**(-31)
 const_M_pr = 1.67262192595*10**(-27)
 const_eps_0 = 8.8541878128*10**(-12)
 const_c = 2.99792458*10**8
+
+print(const_M_pr/const_M_e)
 const_M_e = const_M_pr/64
 # const_M_pr = 64*const_M_e
+
 
 
 class Converter:
@@ -390,8 +393,8 @@ if __name__ == '__main__':
 
 
 
-    with open("../iPIC_par.txt", "w") as file:
-        print_results(file)
+    # with open("../iPIC_par.txt", "w") as file:
+    #     print_results(file)
 
     print_results(None)
 

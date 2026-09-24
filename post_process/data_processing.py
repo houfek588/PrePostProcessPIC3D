@@ -148,13 +148,13 @@ def single_result_analysis(set_data):
             graph_energy(numpy_data, set_data, "hist", "db")
     else:
         if plot_cfg.get_single_value():
-            graph_for_pos_value(numpy_data, set_data, 0.408, "val", "db")
+            graph_for_pos_value(numpy_data, set_data, 0.5, "val", "db")
 
         if plot_cfg.get_single_fft():
-            graph_for_pos_value(numpy_data, set_data, 0.408, "fft", "db")
+            graph_for_pos_value(numpy_data, set_data, 0.5, "fft", "db")
 
         if plot_cfg.get_single_hist():
-            graph_for_pos_value(numpy_data, set_data, 0.408, "hist", "db")
+            graph_for_pos_value(numpy_data, set_data, 0.5, "hist", "db")
 
         if plot_cfg.get_single_value2d():
             graph2d(numpy_data, set_data, "db")
@@ -202,7 +202,7 @@ def multi_result_analysis(set_data: list):
         graph_multi_time_value(numpy_data, set_data, 1, "fft", "pic", user_id="_T1")
 
     if plot_cfg.get_multi_hist():
-        graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=True, merge=False)
+        graph_multi_time_value(numpy_data, set_data, 0, "hist", "db", user_id="_T0", weights_on=True, merge=False)
         # graph_multi_time_value(numpy_data, set_data, 0.1, "hist", "pic", user_id="_T01", weights_on=False)
         # graph_multi_time_value(numpy_data, set_data, 0.2, "hist", "pic", user_id="_T02", weights_on=False)
         # graph_multi_time_value(numpy_data, set_data, 0.3, "hist", "pic", user_id="_T03", weights_on=False)
@@ -212,7 +212,7 @@ def multi_result_analysis(set_data: list):
         # graph_multi_time_value(numpy_data, set_data, 0.7, "hist", "pic", user_id="_T07", weights_on=False)
         # graph_multi_time_value(numpy_data, set_data, 0.8, "hist", "pic", user_id="_T08", weights_on=False)
         # graph_multi_time_value(numpy_data, set_data, 0.9, "hist", "pic", user_id="_T09", weights_on=False)
-        graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=True, merge=False)
+        graph_multi_time_value(numpy_data, set_data, 1, "hist", "db", user_id="_T1", weights_on=True, merge=False)
 
     print("Multi Data was processed")
     return "Multi Data was processed"
@@ -323,11 +323,25 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
 
     # Get time axis and convert to SI units
     axis_time = numpy_data[0].get_time_axis()
-    calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
+    if units == "si":
+        calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
+        title_unit = f"{round(calculation_time * 1000, 0)} ms"
+    elif units == "db":
+        axis_t, label_t = convert_t_axis(axis_time, "db")
+        u = fr"$[{label_t.split('[')[-1]}"
+        calculation_time = axis_t[x_level]
+        title_unit = f"{round(calculation_time, 0)} {u}"
+    else:
+        axis_t, label_t = convert_t_axis(axis_time, "pic")
+        u = fr"$[{label_t.split('[')[-1]}"
+        calculation_time = axis_time[x_level]
+        title_unit = f"{round(calculation_time, 1)} {u}"
+
 
     # Retrieve length axis only once (avoids redundant function calls)
     length_data = numpy_data[0].get_length_axis()
 
+    units = "pic"
     axis_x, label_x = convert_x_axis(length_data, units)
     axis_z, label_z = zip(*[convert_z_axis(v[x_level], set_data[i], units) for i, v in enumerate(var_data)])
 
@@ -375,7 +389,7 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
         # unit1 = unit1.strip()                       # Trim whitespace for safety
 
         description = ploting.PlotDescription(
-            f"Frequency Spectrum for {title_set_data}; t = {round(calculation_time * 1000, 1)} ms",
+            f"Frequency Spectrum for {title_set_data}; t = {title_unit}",
             fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
         description.multidata_labels(data_labels)
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
@@ -383,7 +397,7 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si"
     elif res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
-            f"Histogram for {title_set_data}; t = {round(calculation_time * 1000, 3)} ms",
+            f"Histogram for {title_set_data}; t = {title_unit}",
             axis_z_name, "f(u)")
         description_hist.multidata_labels(data_labels)
         description_hist.set_xlim(-0.03, 0.03)
@@ -447,14 +461,26 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si", u
     var_data1d = [float(d[x_level]) for d in var_data]
     # print(f"len var1d: {len(var_data1d)}")
 
-    # Get time axis and convert to SI units
+    # Get time axis and convert to set units
     axis_position = numpy_data.get_length_axis()
-    # calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
-    calculation_time = axis_position[x_level] * unit.ion.get_ion_skin_depth() * Lx / nx
+    if units == "si":
+        calculation_time = axis_position[x_level] * unit.ion.get_ion_skin_depth() * Lx / nx
+        title_unit = f"{round(calculation_time, 2)} m"
+    elif units == "db":
+        axis_x, label_x = convert_x_axis(axis_position, "db")
+        calculation_time = axis_x[x_level]
+        u = fr"$[{label_x.split('[')[-1]}"
+        # print(f"--------------------------------- {u[:-2]}")
+        title_unit = f"{round(calculation_time, 0)} {u}"
+    else:
+        calculation_time = axis_position[x_level]
+        title_unit = f"{round(calculation_time, 0)} isd"
+
 
     # Retrieve length axis only once (avoids redundant function calls)
     # length_data = numpy_data.get_length_axis()
     time_data = numpy_data.get_time_axis()
+
 
     axis_t, label_t = convert_t_axis(time_data, units)
     axis_z, label_z = convert_z_axis(var_data1d, set_data, units)
@@ -488,7 +514,7 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si", u
         ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, img_folder+save_file_name)
 
     elif res_type == "val":
-        description = ploting.PlotDescription(f"Cut data {set_data} for x = {round(calculation_time, 3)} m",
+        description = ploting.PlotDescription(f"Cut data {set_data} for x = {title_unit}",
                                           label_t, axis_z_name)
         ploting.plot_data(axis_t, axis_z, description, save_graph, img_folder+save_file_name)
     elif res_type == "val_ms":
@@ -497,7 +523,7 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si", u
         else:
             raise Exception(f"For type {res_type} has to be chosen SI units, units=si")
 
-        description = ploting.PlotDescription(f"Cut data {set_data} for x = {round(calculation_time, 3)} m",
+        description = ploting.PlotDescription(f"Cut data {set_data} for x = {title_unit}",
                                           label_t_ms, axis_z_name)
         axis_t_ms = unit_convert.rescale_list(axis_t,1000)
         ploting.plot_data(axis_t_ms, axis_z, description, save_graph, img_folder+save_file_name)
@@ -531,6 +557,7 @@ def graph2d(numpy_data, set_data, result_units = "db", user_id=""):
     axis_z, label_z_unit = convert_z_axis(var_data, set_data, result_units)
 
     label_z = f"{g_axis_name[y_axis_name]} [{label_z_unit}]"
+
 
     # Define plot description
     descr3D = ploting.PlotDescription(f"Time development through space for {set_data}", label_x, label_y, label_z)
@@ -570,6 +597,7 @@ def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bo
     axis_x = fft_axis_x
     axis_y, label_y = convert_t_axis(time_data, result_units)
     label_z = f"{g_axis_name[y_axis_name]} [{label_z_unit}]"
+    label_z = f"Spectral energy [(V/m)·m]"
 
     # Define plot description
     descr3D = ploting.PlotDescription(f"Time development through space for {set_data}",
@@ -672,10 +700,11 @@ def graph_fft2d(numpy_data, set_data, result_units = "db", user_id=""):
     # res_axis_z = positive_semi_space_z
 
     print(f"res_axis_z[0]: {res_axis_z[0]}")
-
+    label_z = f"Spectral energy [(V/m)·s·m]"
+    unit_y = r"$Frequency~~[\omega_{pe}]$"
     descr3D = ploting.PlotDescription(fr"$FFT~2D~result~of~{set_data}$", fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
-                                          fr"$Frequency~~[{extract_unit_from_label(label_y)}]$",
-                                          "Magnitude")
+                                          unit_y,
+                                          label_z)
         # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
     ploting.plot3Dplane_data(res_axis_x, res_axis_y, res_axis_z, descr3D, save_graph,
         img_folder + save_file_name, scale_z)
@@ -777,12 +806,16 @@ def convert_z_axis(axis_y, set_data, units="si"):
             return [axis_z_data, unit_z]
         case "si" | "db":
             unit_z = g_axis_si_units[variable]
+            print(f"unit_z: {unit_z}")
             scale = scale_factors.get(unit_z)
             if scale:
                 axis_z_data = unit_convert.rescale_list(axis_y, scale)
             else:
                 axis_z_data = axis_y  # fallback to original if unit not found
 
+
+            if unit_z == "J/m3":
+                unit_z = r"$J/m^{3}$"
             print(f"unit_z SI: {unit_z}")
             return [axis_z_data, unit_z]
         case _:
