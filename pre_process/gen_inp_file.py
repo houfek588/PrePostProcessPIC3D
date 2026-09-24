@@ -10,13 +10,14 @@ class PIC3DInputFile:
         self.box_size = [1, 1, 1]
         self.cells_number = [100, 100, 100]
         self.periodic = [1, 1, 1]
+        self.mpi_subdomains = [1, 1, 1]
 
         self.dt = 0
         self.cycles_number = 0
 
         self.particles = []
         for i in range(0, num_particle_types):
-            self.particles.append(CalcParticle(0, 0, 0, 0, [0, 0, 0], [0, 0, 0], [0, 0, 0]))
+            self.particles.append(CalcParticle(0, 0, 0, 1, [0, 0, 0], [0, 0, 0], [1, 1, 1]))
 
     def text_title1(self, title, file=None):
         print(f"\n#  %%%%%%%%%%%%%%%%%%%    {title}    %%%%%%%%%%%%%%%%%%", file=file)
@@ -33,7 +34,7 @@ class PIC3DInputFile:
         print(f"# RestartDirName = data", file=file)
 
         self.text_title2("New flags:", file)
-        print(f"Case\t\t\t\t= GEMjik\t\t\t# Select the case", file=file)
+        print(f"Case\t\t\t\t= {self.case}\t\t\t# Select the case", file=file)
         print(f"PoissonCorrection\t= no       # Poisson correction", file=file)
         print(f"WriteMethod\t\t\t= pvtk", file=file)
 
@@ -71,9 +72,9 @@ class PIC3DInputFile:
 
         self.text_title1("MPI TOPOLOGY", file)
         self.text_comment("number of MPI subdomains in each direction", file)
-        print(f"\tXLEN = {32}", file=file)
-        print(f"\tYLEN = {1}", file=file)
-        print(f"\tZLEN = {1}", file=file)
+        print(f"\tXLEN = {self.mpi_subdomains[0]}", file=file)
+        print(f"\tYLEN = {self.mpi_subdomains[1]}", file=file)
+        print(f"\tZLEN = {self.mpi_subdomains[2]}", file=file)
 
         self.text_comment("topology of subdomains in each dimension (1=true, 0=false)", file)
         print(f"\tPERIODICX = {self.periodic[0]}", file=file)
@@ -89,9 +90,9 @@ class PIC3DInputFile:
                 value = self.particles[i].thermal_vel[1]
             elif name == "wth":
                 value = self.particles[i].thermal_vel[2]
-            elif name == "v0":
-                value = self.particles[i].drift_vel[0]
             elif name == "u0":
+                value = self.particles[i].drift_vel[0]
+            elif name == "v0":
                 value = self.particles[i].drift_vel[1]
             elif name == "w0":
                 value = self.particles[i].drift_vel[2]
@@ -114,12 +115,6 @@ class PIC3DInputFile:
 
         return tt
 
-        # if name == "uth":
-        #     value = p.thermal_vel[0]
-        #
-        # values = " ".join(str(p.thermal_vel[0]) for p in self.particles)
-        # return f"{name} = {values}"
-
     def text_particle_param(self, file=None):
         self.text_title1("PARTICLE PARAMETERS", file)
         self.text_comment("ns = number of species", file)
@@ -127,20 +122,18 @@ class PIC3DInputFile:
         self.text_comment("1 = protons", file)
         self.text_comment("...", file)
 
-        print(f"\tns = {3}", file=file)
+        print(f"\tns = {len(self.particles)}", file=file)
 
         self.text_title2("qom = charge to mass ratio for different species", file)
         print(f"\t{self.text_particle_row('qom')}", file=file)
-        # print(f"\tqom = {self.particles[0].qom} {1.0} {-64.0} {1.0}", file=file)
 
         self.text_title2("Initial density (make sure that plasma is neutral)", file)
         print(f"\t{self.text_particle_row('rhoINIT')}", file=file)
         print(f"\t{self.text_particle_row('rhoINJECT')}", file=file)
-        # print(f"\trhoINIT =   {0.99}  {1.0}   {0.01}    {0.0}", file=file)
-        # print(f"\trhoINJECT = {0.0}   {0.0}   {0.0}     {0.0}", file=file)
 
         self.text_title2("TrackParticleID[species] = 1=true, 0=false --> Assign ID to particles ", file)
-        print(f"\tTrackParticleID= {0} {0} {1} {1}", file=file)
+        track_ids = " ".join(str(p.track_id) for p in self.particles)
+        print(f"\tTrackParticleID = {track_ids}", file=file)
 
         self.text_title2("uth = thermal velocity for different species - Direction X", file)
         print(f"\t{self.text_particle_row('uth')}", file=file)
@@ -276,6 +269,15 @@ class PIC3DInputFile:
         self.text_title2("restart cycle", file)
         print("\tRestartOutputCycle = 0", file=file)
         print("\tCallFinalize=1", file=file)
+
+    def set_case(self, case):
+        self.case = case
+
+    def set_mpi_topology(self, xlen, ylen, zlen):
+        self.mpi_subdomains = [xlen, ylen, zlen]
+
+    def set_periodic(self, px, py, pz):
+        self.periodic = [px, py, pz]
 
     def set_mag_field(self, Bx, By, Bz):
         self.B[0] = Bx
