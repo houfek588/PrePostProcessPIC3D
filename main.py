@@ -1,153 +1,155 @@
+"""
+main.py - Hlavní vstupní skript pro postprocessing výsledků numerického řešiče iPIC3D.
+"""
+
+import os
+import json
 import post_process.vtk_processing as vtk
 import post_process.hdf5_processing as hdf
 import post_process.ploting as ploting
 import post_process.data_processing as data
-import os
-import json
+from post_process.config_manager import load_config, save_config_file, resolve_config_path
 
-g_available = ["Efield_x", "Efield_y", "Efield_z", "rhoe0", "rhoi1", "rhoe2", "velocity_1", "velocity_2",
-             "velocity_3", "energy_kin", "energy_ele", "energy_kin0", "energy_kin1", "energy_kin2", "energy_total"]
+# Seznam podporovaných veličin pro GUI a skripty
+g_available = [
+    "Efield_x", "Efield_y", "Efield_z",
+    "rhoe0", "rhoi1", "rhoe2",
+    "velocity_1_x", "velocity_2_x", "velocity_3_x",
+    "energy_kin", "energy_ele",
+    "energy_kin0", "energy_kin1", "energy_kin2",
+    "energy_total"
+]
 
-def check_saved_data(var):
+
+def check_saved_data(var: str):
+    """
+    Zkontroluje, zda již existují předpočtená data v mezipaměti script_data/.
+    Pokud neexistují, načte je ze zdrojových simulačních souborů (VTK / HDF5 / ConservedQuantities).
+    """
     script_data_folder = "script_data"
-    if any(os.listdir(script_data_folder)):  # Check if folder contains any files or subfolders
-        print("The folder is not empty.")
-        files = os.listdir(script_data_folder)
-        # print(files)
+    os.makedirs(script_data_folder, exist_ok=True)
+    files = os.listdir(script_data_folder)
 
-        found = any(var in f for f in files)  # Check if any file contains vars[0]
+    # Hledáme soubory tvaru {var}_data2D.npy nebo {var}_data1D.npy
+    found = any(f.startswith(var) and f.endswith(".npy") for f in files)
 
-        print("Founded" if found else "Not founded")
-        # vtk.result_analysis(var)
-        if not found:
+    status_str = "Nalezena v mezipaměti (rychlé načtení)" if found else "Nenalezena v mezipaměti, načítám ze surových dat..."
+    print(f">> Veličina '{var}': {status_str}")
+
+    if not found:
+        # 1. Energie (uloženy v textovém souboru ConservedQuantities.txt)
+        if var.startswith("energy_") or var == "energy":
+            print(f"  Načítám data energií z ConservedQuantities.txt pro '{var}'...")
             try:
-                try:
-                    vtk.result_analysis(var)
-                    print(" vtk data loaded")
-                except:
-                    hdf.result_analysis(var)
-                    print(" hdf data loaded")
-                # print("Data loaded")
-            except:
-                try:
-                    vtk.conserve_analysis(var)
-                    print(" vtk conserve data loaded")
-                except:
-                    raise Exception(f"Data with name {var} not available")
+                vtk.conserve_analysis(var)
+                print(f"  Data energií pro '{var}' úspěšně načtena.")
+                return
+            except Exception as e:
+                raise RuntimeError(f"Chyba při načítání energií pro '{var}': {e}")
 
+        # 2. Částicová data (rychlosti/pozice druhů uložené v HDF5)
+        elif var.startswith("velocity") or var.startswith("position"):
+            print(f"  Načítám částicová data z HDF5 pro '{var}'...")
+            try:
+                hdf.result_analysis(var)
+                print(f"  Částicová data pro '{var}' úspěšně načtena.")
+                return
+            except Exception as e:
+                raise RuntimeError(f"Chyba při načítání částic z HDF5 pro '{var}': {e}")
 
-    else:
-        print("The folder is empty.")
-        try:
-            vtk.result_analysis(var)
-        except:
-            hdf.result_analysis(var)
-        print("Data loaded")
+        # 3. Polní veličiny (Efield, Bfield, rhoe, rhoi, Je, Ji)
+        else:
+            print(f"  Načítám polní data pro '{var}'...")
+            vtk_err = None
+            try:
+                vtk.result_analysis(var)
+                print(f"  VTK data pro '{var}' úspěšně načtena.")
+                return
+            except Exception as e:
+                vtk_err = e
+
+            # Fallback na HDF5 pokud VTK není k dispozici
+            try:
+                hdf.result_analysis(var)
+                print(f"  HDF5 data pro '{var}' úspěšně načtena (fallback).")
+                return
+            except Exception as hdf_err:
+                raise RuntimeError(f"Veličinu '{var}' se nepodařilo načíst ani z VTK ({vtk_err}), ani z HDF5 ({hdf_err}).")
+
 
 def clear_script_data():
-    # Load configuration from JSON file
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
+    """Vymaže dočasné .npy soubory z mezipaměti script_data/."""
+    folder_path = "script_data"
+    if not os.path.exists(folder_path):
+        return
 
-    # Extract relevant parameters
-    # folder_path = parameters["result_folder"]
-    folder_path = "script_data/"
-
-    # Loop over files and remove them
+    count = 0
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
-
-        # Remove only files (not folders)
         if os.path.isfile(file_path):
             os.remove(file_path)
-            print(f"deleted: {file_path}")
+            count += 1
+    print(f"Promazána mezipaměť: smazáno {count} souborů ze složky '{folder_path}'.")
 
-def data_process(single_var, multi_var):
 
-    # multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
-    # multi_var = ["velocity_1_x", "velocity_3_x"]
-    # multi_var = []
-    # single_var = ["Efield_x", "rhoe0", "energy_ele"]
-    # single_var = ["Efield_x", "energy_ele"]
-    # single_var = []
-    # 'rho_e'
-    all = multi_var + single_var
+def data_process(single_var: list, multi_var: list):
+    """
+    Hlavní řídicí funkce pro zpracování a vykreslení vybraných veličin.
+    """
+    all_vars = list(dict.fromkeys(multi_var + single_var))
+    print(f"\n=======================================================")
+    print(f" Spouštím analýzu dat iPIC3D")
+    print(f" Vybrané veličiny: {all_vars}")
+    print(f"=======================================================\n")
 
-    print(f">> chosen data: {all}")
+    # 1. Kontrola a příprava dat v mezipaměti
+    for var in all_vars:
+        check_saved_data(var)
 
-    for one in all:
-        check_saved_data(one)
-
-    # numpy data analysis to graphs
+    # 2. Analýza jednotlivých veličin
     for s in single_var:
         data.single_result_analysis(s)
-    data.multi_result_analysis(multi_var)
 
-    # clear saved numpy data
-    # clear_script_data()
+    # 3. Multi-analýza (srovnání více veličin)
+    if multi_var:
+        data.multi_result_analysis(multi_var)
 
-    # /lib64/mpich/bin/mpiexec -n 32 ./iPIC3D inputfiles/file_name.inp
-
+    # 4. Zobrazení grafů na obrazovku (pokud je zapnuto v ploting)
     ploting.plot_all_graphs()
 
-    print("ANALYSING DONE")
+    print("\n[OK] Analýza iPIC3D dat úspěšně dokončena.")
 
-def save_json(json_data, file_name: str = "config.json"):
-    with open(file_name, "w") as f:
-        f.write(json_data)
-    print(f"Configuration succesfully writen into {file_name}")
 
-def save_config(result_folder, output_folder, save_graphs, FieldOutputCycle, ParticleOutputCycle, NumberHdfFiles):
-    data = {
+def save_config(result_folder: str, output_folder: str, save_graphs: bool,
+                field_output_cycle: int, particle_output_cycle: int, number_hdf_files: int):
+    """Uloží hlavní konfiguraci do config.json."""
+    config_dict = {
         "result_folder": result_folder,
         "output_folder": output_folder,
         "save_graphs": str(save_graphs),
-        "FieldOutputCycle": FieldOutputCycle,
-        "ParticleOutputCycle": ParticleOutputCycle,
-        "NumberHdfFiles": NumberHdfFiles
+        "FieldOutputCycle": field_output_cycle,
+        "ParticleOutputCycle": particle_output_cycle,
+        "NumberHdfFiles": number_hdf_files
     }
-
-    json_data = json.dumps(data)
-    file_name = "config.json"
-    save_json(json_data, file_name)
+    path = save_config_file(config_dict, "config.json")
+    print(f"Konfigurace úspěšně uložena do: {path}")
 
 
-def save_plot_config(options_single, options_multi):
-    print(f"options_single: {options_single}")
-    print(f"options_multi: {options_multi}")
-
-
-    data = {
+def save_plot_config(options_single: dict, options_multi: dict):
+    """Uloží konfiguraci vykreslování do plot_config.json."""
+    plot_dict = {
         "single": options_single,
-        "multi": options_multi,
+        "multi": options_multi
     }
-
-    json_data = json.dumps(data)
-    file_name = "plot_config.json"
-    save_json(json_data, file_name)
+    path = save_config_file(plot_dict, "plot_config.json")
+    print(f"Konfigurace grafů úspěšně uložena do: {path}")
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-
-
-    # 1) read setting file
-    # 2) check if numpy data
-    #     2.1) save numpy data from vtk if not
-    #     2.2) save numpy data from hdf5 if not
-    # 3) generate graphs
-
-
-    # multi_var = ["velocity_1_x", "velocity_2_x", "velocity_3_x"]
-    # multi_var = ["velocity_3_x", "velocity_1_x"]
+    # Výchozí testovací spuštění:
+    # multi_var = ["velocity_1_x", "velocity_3_x"]
     multi_var = []
     # single_var = ["Efield_x", "rhoe0", "energy_ele"]
     single_var = ["Efield_x", "energy_ele"]
-    # single_var = ["energy_total"]
-    # single_var = []
-    # 'rho_e'
 
     data_process(single_var, multi_var)
-    # data.ReadPlotConfig("plot_config.json")
-
-

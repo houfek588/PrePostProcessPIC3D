@@ -1,9 +1,17 @@
+"""
+ploting.py - Vykreslování 1D, 2D a 3D grafů pomocí Matplotlib pro iPIC3D postprocessing.
+"""
+
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
 plot_immediately = False
 
+
 class PlotDescription:
+    """Datová struktura popisující parametry a popisky grafu."""
+
     def __init__(self, title="title", label_x="axis x", label_y="axis y", label_z="axis z"):
         self.title = title
         self.label_x = label_x
@@ -33,246 +41,176 @@ class PlotDescription:
             self.data_labels.append(l)
 
 
-
 def plot_data(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
-    """
-    Plots nodal accelerations from acceleration data.
-
-    Args:
-        acceleration_data (dict): Acceleration results from OP2 file.
-    """
+    """Vykreslí 1D křivku nebo sadu křivek."""
     scale = 2
-    fig = plt.figure(figsize=(16/scale, 9/scale))
+    fig = plt.figure(figsize=(16 / scale, 9 / scale))
 
-    if len(dataY) < 5:
-        for i in range(0 ,len(dataY)):
-            plt.plot(dataX, dataY[i], label=descr.data_labels[i])
-            # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
+    dataY_arr = np.asarray(dataY)
+    if dataY_arr.ndim > 1 and len(dataY) < 5:
+        for i in range(len(dataY)):
+            label = descr.data_labels[i] if i < len(descr.data_labels) else f"Series {i}"
+            plt.plot(dataX, dataY[i], label=label)
         plt.legend()
     else:
         plt.plot(dataX, dataY)
-        # plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
 
     plt.xlabel(descr.label_x)
     plt.ylabel(descr.label_y)
     plt.title(descr.title)
     plt.grid(True)
 
-    # Show data points
-
-
-    if descr.y_max == 0 and descr.y_min == 0:
-        # print("y limits dont used")
-        pass
-    else:
-        print(f"graph plot {descr.title}: y limits ({descr.y_min}, {descr.y_max})")
+    if descr.y_max != 0 or descr.y_min != 0:
         plt.ylim(descr.y_min, descr.y_max)
 
+    if descr.x_max != 0 or descr.x_min != 0:
+        plt.xlim(descr.x_min, descr.x_max)
+
     if save_to_file:
-        # Save the plot to a file
-        plt.savefig(file_name, dpi=300) # Save as PNG file
+        os.makedirs(os.path.dirname(os.path.abspath(file_name)), exist_ok=True)
+        plt.savefig(file_name, dpi=300, bbox_inches="tight")
 
     if plot_immediately:
         plt.show()
+    elif save_to_file:
+        plt.close(fig)
 
 
 def plot3D_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
-    # Create a figure and 3D axes
+    """Vykreslí 3D povrchový graf (surface plot)."""
     scale = 1
-    fig = plt.figure(figsize=(16/scale, 9/scale))
-    ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(figsize=(16 / scale, 9 / scale))
+    ax = fig.add_subplot(111, projection="3d")
 
     X, Y = np.meshgrid(dataX, dataY)
-    Z = np.array(dataZ)
-    # ground = np.zeros_like(X)
+    Z = np.asarray(dataZ)
 
-    # Plot a surface
-    surf = ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
-    # surf = ax.plot_surface(X, Y, ground, facecolors=plt.cm.viridis((Z - Z.min()) / (Z.max() - Z.min())),
-    #                        rstride=1, cstride=1, shade=False)
-    # surf = ax.plot_surface(x_axis, time_scale, data_x_t, cmap='viridis')
+    surf = ax.plot_surface(X, Y, Z, cmap="viridis", edgecolor="none")
+    fig.colorbar(surf, shrink=0.5, aspect=10, ax=ax)
 
-    # for i in range(0, len(dataY), 20):
-    #     # y = y_base + z * 0.1  # Optionally modify the curve (e.g., add offset)
-    #     ax.plot(dataX, ys=dataY[i], zs=dataZ, zdir='y', label=f'Curve at y={dataY[i]:.1f}')
-
-    # Add color bar
-    fig.colorbar(surf, shrink=0.5, aspect=10)
-    # mappable = plt.cm.ScalarMappable(cmap='viridis')
-    # mappable.set_array(Z)
-    # fig.colorbar(mappable, shrink=0.5, aspect=10, label="Color Scale")
-
-    # Disable perspective by setting a large viewing distance
-    ax.dist = 10  # The larger the value, the less perspective distortion
-
-    # Add labels
+    ax.dist = 10
     ax.set_title(descr.title)
     ax.set_xlabel(descr.label_x)
     ax.set_ylabel(descr.label_y)
     ax.set_zlabel(descr.label_z)
-    # ax.view_init(elev=90, azim=0)
 
     if save_to_file:
-        # Save the plot to a file
-        plt.savefig(file_name, dpi=300)  # Save as PNG file
+        os.makedirs(os.path.dirname(os.path.abspath(file_name)), exist_ok=True)
+        plt.savefig(file_name, dpi=300, bbox_inches="tight")
 
     if plot_immediately:
         plt.show()
+    elif save_to_file:
+        plt.close(fig)
 
 
 def plot3Dwire_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
-    # Create a figure and 3D axes
+    """Vykreslí 3D drátový model (wireframe)."""
     scale = 1
-
-    # fig, (ax1, ax2) = plt.subplots( 2, 1, figsize=(16/scale, 9/scale), subplot_kw={'projection': '3d'})
-    fig, ax1 = plt.subplots(figsize=(16 / scale, 9 / scale), subplot_kw={'projection': '3d'})
+    fig, ax1 = plt.subplots(figsize=(16 / scale, 9 / scale), subplot_kw={"projection": "3d"})
 
     X, Y = np.meshgrid(dataX, dataY)
-    Z = np.array(dataZ)
-    # ground = np.zeros_like(X)
-    spacing = int(len(Z)/10)
+    Z = np.asarray(dataZ)
+    spacing = max(1, len(Z) // 10)
 
-    # Plot a surface
-    # Give the first plot only wireframes of the type y = c
     ax1.plot_wireframe(X, Y, Z, rstride=spacing, cstride=0)
-
-
-    # Give the second plot only wireframes of the type x = c
-    # ax2.plot_wireframe(X, Y, Z, rstride=0, cstride=10)
-    # ax2.set_title("Row (y) stride set to 0")
-
-
-    # Add labels
     ax1.set_title(descr.title)
     ax1.set_xlabel(descr.label_x)
     ax1.set_ylabel(descr.label_y)
     ax1.set_zlabel(descr.label_z)
-    # ax.view_init(elev=90, azim=0)
     plt.tight_layout()
 
     if save_to_file:
-        # Save the plot to a file
-        plt.savefig(file_name, dpi=300)  # Save as PNG file
+        os.makedirs(os.path.dirname(os.path.abspath(file_name)), exist_ok=True)
+        plt.savefig(file_name, dpi=300, bbox_inches="tight")
 
     if plot_immediately:
         plt.show()
+    elif save_to_file:
+        plt.close(fig)
 
-from matplotlib.colors import Normalize
+
 def plot3Dplane_data(dataX, dataY, dataZ, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png", max_bar_val=None):
-    # Create a figure and 3D axes
+    """Vykreslí 2D řez pomocí imshow (časoprostorový vývoj nebo 2D FFT)."""
     scale = 1.5
-    fig = plt.figure(figsize=(16/scale, 9/scale))
+    fig = plt.figure(figsize=(16 / scale, 9 / scale))
     ax = fig.add_subplot()
 
-    # X, Y = np.meshgrid(dataX, dataY)
-    # Z = np.array(dataZ)
-    Z = dataZ
-    # ground = np.zeros_like(X)
+    Z = np.asarray(dataZ)
+    x0, x1 = dataX[0], dataX[-1]
+    y0, y1 = dataY[0], dataY[-1]
 
-    t = np.linspace(0, 2 * np.pi, 1024)
-    # data2d = np.sin(t)[:, np.newaxis] * np.cos(t)[np.newaxis, :]
-
-    # fig, ax = plt.subplots()
-    # plt.imshow(Z, aspect='auto', extent=(axis_x_SI[0], axis_x_SI[-1], axis_time_SIms[0], axis_time_SIms[-1]),
-    #            cmap='viridis')
-    # im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
-    #            cmap='viridis', origin="lower", vmin=descr.y_min, vmax=descr.y_max)
-    im = ax.imshow(Z, aspect='auto', extent=(dataX[0], dataX[-1], dataY[0], dataY[-1]),
-                              cmap='viridis', origin="lower", vmax=max_bar_val)
-    # im = ax.imshow(Z, extent=[0, dataX[-1], 0, dataY[-1]], cmap='viridis', origin='lower',
-    #            aspect='auto')
-    ax.set_title(descr.title)
-
-    fig.colorbar(im, ax=ax, label=descr.label_z, use_gridspec=True)
-
-
-    # Add labels
+    im = ax.imshow(Z, aspect="auto", extent=(x0, x1, y0, y1), cmap="viridis", origin="lower", vmax=max_bar_val)
     ax.set_title(descr.title)
     ax.set_xlabel(descr.label_x)
     ax.set_ylabel(descr.label_y)
-    # ax.set_zlabel(descr.label_z)
-    # ax.view_init(elev=90, azim=0)
+
+    fig.colorbar(im, ax=ax, label=descr.label_z)
 
     if save_to_file:
-        # Save the plot to a file
-        plt.savefig(file_name, dpi=300)  # Save as PNG file
+        os.makedirs(os.path.dirname(os.path.abspath(file_name)), exist_ok=True)
+        plt.savefig(file_name, dpi=300, bbox_inches="tight")
 
     if plot_immediately:
         plt.show()
+    elif save_to_file:
+        plt.close(fig)
 
 
 def plot_fft(dataX, dataY, descr: PlotDescription, save_to_file: bool = False, file_name="plot.png"):
-    aa = 50
-    step = dataX[aa] - dataX[aa - 1]
+    """Vypočítá 1D FFT spektrum a vykreslí jej."""
+    if len(dataX) < 2:
+        return
 
-    # Perform FFT
+    step = float(np.diff(dataX).mean())
+    if step == 0:
+        return
+
     fft_result = np.fft.fft(dataY)
     frequencies = np.fft.fftfreq(len(dataY), d=step)
-
-    # Get magnitude spectrum (optional)
     magnitude = np.abs(fft_result)
 
-    # Generate plot
-    plot_data(frequencies[1:len(frequencies) // 2], magnitude[1:len(magnitude) // 2], descr, save_to_file,
-                      file_name)
+    n_half = len(frequencies) // 2
+    plot_data(frequencies[1:n_half], magnitude[1:n_half], descr, save_to_file, file_name)
 
 
-def plot_histogram(dataX, levels, descr: PlotDescription, weights, save_to_file: bool = False, file_name="plot.png"):
-    """
-    Plots nodal accelerations from acceleration data.
-
-    Args:
-        acceleration_data (dict): Acceleration results from OP2 file.
-    """
+def plot_histogram(dataX, levels, descr: PlotDescription, weights=None, save_to_file: bool = False, file_name="plot.png"):
+    """Vykreslí histogram distribučních funkcí částic."""
     scale = 2
-    fig = plt.figure(figsize=(16/scale, 9/scale))
+    fig = plt.figure(figsize=(16 / scale, 9 / scale))
 
-    multiple_data = False
-    if len(dataX) < 5:
-        for i in range(0, len(dataX)):
-            data_label = descr.data_labels[i]
-            plt.hist(dataX[i], bins=levels, label=data_label, weights=weights[i])
-            # plt.hist(dataX[i], bins=levels, label=data_label)
-            # plt.scatter(dataX, dataY[i], color='red', label="Data Points", zorder=3)
-        multiple_data = True
+    is_multi = isinstance(dataX, (list, tuple)) and len(dataX) > 0 and isinstance(dataX[0], (list, tuple, np.ndarray))
+
+    if is_multi and len(dataX) < 5:
+        for i in range(len(dataX)):
+            label = descr.data_labels[i] if i < len(descr.data_labels) else f"Species {i}"
+            w = weights[i] if weights is not None and i < len(weights) else None
+            plt.hist(dataX[i], bins=levels, label=label, weights=w, alpha=0.7)
+        plt.legend()
     else:
         plt.hist(dataX, bins=levels, weights=weights)
-        # plt.scatter(dataX, dataY, color='red', label="Data Points", zorder=3)
-    # plt.hist(dataX, bins=levels)
 
     plt.xlabel(descr.label_x)
     plt.ylabel(descr.label_y)
     plt.title(descr.title)
     plt.grid(True)
 
-    if multiple_data:
-        plt.legend()
-    # Show data points
-
-
-    if descr.y_max == 0 and descr.y_min == 0:
-        # print("y limits dont used")
-        pass
-    else:
-        print(f"graph plot {descr.title}: y limits ({descr.y_min}, {descr.y_max})")
+    if descr.y_max != 0 or descr.y_min != 0:
         plt.ylim(descr.y_min, descr.y_max)
 
-    if descr.x_max == 0 and descr.x_min == 0:
-        # print("y limits dont used")
-        pass
-    else:
-        print(f"graph plot {descr.title}: x limits ({descr.x_min}, {descr.x_max})")
+    if descr.x_max != 0 or descr.x_min != 0:
         plt.xlim(descr.x_min, descr.x_max)
 
     if save_to_file:
-        # Save the plot to a file
-        plt.savefig(file_name, dpi=300) # Save as PNG file
+        os.makedirs(os.path.dirname(os.path.abspath(file_name)), exist_ok=True)
+        plt.savefig(file_name, dpi=300, bbox_inches="tight")
 
     if plot_immediately:
         plt.show()
+    elif save_to_file:
+        plt.close(fig)
 
 
 def plot_all_graphs():
+    """Zobrazí všechny vytvořené grafy na obrazovce."""
     plt.show()
-
-

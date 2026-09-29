@@ -1,197 +1,186 @@
-import math
+"""
+data_processing.py - Zpracování mezipaměťových NumPy dat (.npy), přepočty os/jednotek a generování grafů.
+"""
 
+import math
+import os
 import numpy as np
-import json
 import post_process.ploting as ploting
 import unit_convert
 import pre_process.unit_input as unit
-from post_process.vtk_processing import read_step_size
 import post_process.read_files as read
-from distutils.util import strtobool
-import win as w
+from post_process.config_manager import load_config, load_plot_config, to_bool
+from post_process.vtk_processing import read_step_size
 
+# Definice klíčů konfigurací (odděleno od win.py pro zamezení cyklickým importům)
+SINGLE_CONFIG_KEYS = ("Value", "FFT", "Histogram", "Value2D", "FFT2D", "FFT in time")
+MULTI_CONFIG_KEYS = ("Value", "FFT", "Histogram")
 
-# print(d[0][0])
-# print(a[0][0])
-g_keys = ["Efield", "Bfield", "rhoe0", "rhoi1", "rhoe2", "Je", "Ji", "velocity", "velocity_1", "velocity_2", "velocity_3",
-          "energy", "energy_kin", "energy_ele", "energy_kin0", "energy_kin1", "energy_kin2", "energy_total"]
-g_names = ["Electric field ", "Magnetic field", "Electron density", "Ion density", "Electron density", "Electron current density",
-           "Ion current density", "Velocity", "Electron velocity", "Ion velocity", "El. beam velocity", "Energy", "Kin. energy",
-           "El. energy", "Electron kin. energy", "Ion kin. energy", "Electron beam kin. energy", "Total energy"]
-g_pic_units = ["om_i ", "??", "4pi", "4pi", "4pi", "??", "??", "c", "c", "c", "c", "??", "??", "??", "??", "??", "??", "??"]
-g_si_units = ["V/m ", "T", "1", "1", "1", "A/m", "A/m", "m/s", "m/s", "m/s", "m/s", "J/m3", "J/m3", "J/m3", "J/m3", "J/m3", "J/m3", "J/m3"]
-g_type_data = ["field ", "field", "field", "field", "field", "field", "field", "part", "part", "part", "part", "field", "field", "field", "field", "field", "field", "field"]
-g_weights = [1, 1, 1, 1, 1, 1, 1, 1, 0.99, 1, 0.5, 1, 1, 1, 1, 1, 1, 1]
+# Strukturovaný slovník fyzikálních veličin
+QUANTITY_DEFINITIONS = {
+    "Efield": {"name": "Electric field", "pic_unit": "om_i", "si_unit": "V/m", "type": "field", "weight": 1.0},
+    "Bfield": {"name": "Magnetic field", "pic_unit": "v_A/c", "si_unit": "T", "type": "field", "weight": 1.0},
+    "rhoe0": {"name": "Electron density", "pic_unit": "4pi", "si_unit": "1", "type": "field", "weight": 1.0},
+    "rhoi1": {"name": "Ion density", "pic_unit": "4pi", "si_unit": "1", "type": "field", "weight": 1.0},
+    "rhoe2": {"name": "Electron beam density", "pic_unit": "4pi", "si_unit": "1", "type": "field", "weight": 1.0},
+    "Je": {"name": "Electron current density", "pic_unit": "A/m2", "si_unit": "A/m2", "type": "field", "weight": 1.0},
+    "Ji": {"name": "Ion current density", "pic_unit": "A/m2", "si_unit": "A/m2", "type": "field", "weight": 1.0},
+    "velocity": {"name": "Velocity", "pic_unit": "c", "si_unit": "m/s", "type": "part", "weight": 1.0},
+    "velocity_1": {"name": "Electron velocity", "pic_unit": "c", "si_unit": "m/s", "type": "part", "weight": 0.99},
+    "velocity_2": {"name": "Ion velocity", "pic_unit": "c", "si_unit": "m/s", "type": "part", "weight": 1.0},
+    "velocity_3": {"name": "Electron beam velocity", "pic_unit": "c", "si_unit": "m/s", "type": "part", "weight": 0.5},
+    "energy": {"name": "Energy", "pic_unit": "mi*c^2", "si_unit": "J/m3", "type": "field", "weight": 1.0},
+    "energy_kin": {"name": "Kinetic energy", "pic_unit": "mi*c^2", "si_unit": "J/m3", "type": "field", "weight": 1.0},
+    "energy_ele": {"name": "Electric field energy", "pic_unit": "mi*c^2", "si_unit": "J/m3", "type": "field", "weight": 1.0},
+    "energy_kin0": {"name": "Electron kin. energy", "pic_unit": "mi*c^2", "si_unit": "J/m3", "type": "field", "weight": 1.0},
+    "energy_kin1": {"name": "Ion kin. energy", "pic_unit": "mi*c^2", "si_unit": "J/m3", "type": "field", "weight": 1.0},
+    "energy_kin2": {"name": "Electron beam kin. energy", "pic_unit": "mi*c^2", "si_unit": "J/m3", "type": "field", "weight": 1.0},
+    "energy_total": {"name": "Total energy", "pic_unit": "mi*c^2", "si_unit": "J/m3", "type": "field", "weight": 1.0},
+}
 
+# Zpětně kompatibilní mapovací slovníky
+g_keys = list(QUANTITY_DEFINITIONS.keys())
+g_names = [v["name"] for v in QUANTITY_DEFINITIONS.values()]
+g_pic_units = [v["pic_unit"] for v in QUANTITY_DEFINITIONS.values()]
+g_si_units = [v["si_unit"] for v in QUANTITY_DEFINITIONS.values()]
+g_type_data = [v["type"] for v in QUANTITY_DEFINITIONS.values()]
+g_weights = [v["weight"] for v in QUANTITY_DEFINITIONS.values()]
 
-g_axis_name = {key: g_names[i] for i, key in enumerate(g_keys)}
-g_axis_si_units = {key: g_si_units[i] for i, key in enumerate(g_keys)}
-g_axis_pic_units = {key: g_pic_units[i] for i, key in enumerate(g_keys)}
-g_axis_type = {key: g_type_data[i] for i, key in enumerate(g_keys)}
-g_hist_weights = {key: g_weights[i] for i, key in enumerate(g_keys)}
+g_axis_name = {k: v["name"] for k, v in QUANTITY_DEFINITIONS.items()}
+g_axis_si_units = {k: v["si_unit"] for k, v in QUANTITY_DEFINITIONS.items()}
+g_axis_pic_units = {k: v["pic_unit"] for k, v in QUANTITY_DEFINITIONS.items()}
+g_axis_type = {k: v["type"] for k, v in QUANTITY_DEFINITIONS.items()}
+g_hist_weights = {k: v["weight"] for k, v in QUANTITY_DEFINITIONS.items()}
 
 
 class ReadNMPFileData:
-    def __init__(self, set_data):
-        name_split = set_data.split("_")
-        category = name_split[0] if name_split else ""
-        axis = name_split[1] if len(name_split) > 1 else "x"
+    """Načítá 1D nebo 2D data z mezipaměti script_data/ jako NumPy pole."""
 
-        try:
-            data_name = "script_data/" + set_data + "_data2D.npy"
-            print(data_name)
-            self.data = np.load(data_name)
+    def __init__(self, set_data: str):
+        self.set_data = set_data
+        file_2d = os.path.join("script_data", f"{set_data}_data2D.npy")
+        file_1d = os.path.join("script_data", f"{set_data}_data1D.npy")
+
+        if os.path.exists(file_2d):
+            self.data = np.load(file_2d)
             self.data_dim = 2
-        except:
-            data_name = "script_data/" + set_data + "_data1D.npy"
-            print(data_name)
-            self.data = np.load(data_name)
+        elif os.path.exists(file_1d):
+            self.data = np.load(file_1d)
             self.data_dim = 1
-        # print(f"loaded data: {data_name}")
+        else:
+            raise FileNotFoundError(f"Mezipaměťová data pro '{set_data}' nebyla nalezena (ani 1D, ani 2D).")
 
         z_axis_name = set_data.split("_")[0]
-        # print(f"set_data[0]: {set_data}")
-        # print(f"z_axis_name: {z_axis_name}")
-        self.type = g_axis_type[z_axis_name]
-        # print(f"self.type: {self.type}")
+        # Pokud je v názvu i číslo (např. velocity_1), zkontrolujeme plný název
+        category_full = "_".join(set_data.split("_")[:2]) if len(set_data.split("_")) > 2 else z_axis_name
+        if category_full in g_axis_type:
+            self.type = g_axis_type[category_full]
+        elif z_axis_name in g_axis_type:
+            self.type = g_axis_type[z_axis_name]
+        else:
+            self.type = "field"
 
-    def get_data_dimension(self):
+    def get_data_dimension(self) -> int:
         return self.data_dim
 
-    def get_data_x_t(self):
+    def get_data_x_t(self) -> np.ndarray:
         return self.data
 
-    def get_time_axis(self):
-
-        with open("config.json", "r") as file:
-            parameters = json.load(file)
-
-        # read parameters to variables
-        folder = parameters["result_folder"]
-        setting = read.ReadHDFSettings(folder + "settings.hdf")
+    def get_time_axis(self) -> list:
+        cfg = load_config()
+        folder = cfg.get("result_folder", "")
+        settings_path = os.path.join(folder, "settings.hdf")
+        setting = read.ReadHDFSettings(settings_path)
         dt = setting.get_time_step_size()
         step = read_step_size(self.type)
-        axis_time = []
-        # print(f"data: {self.data}")
-        for i in range(0, len(self.data)):
-            axis_time.append(i * step * dt)
-        # axis_time = []
-        # for i in range(0, len(self.data)):
-        #     axis_time.append(i)
 
-        return axis_time
+        n_steps = len(self.data)
+        return [i * step * dt for i in range(n_steps)]
 
     def get_length_axis(self):
         if self.data_dim == 1:
-            return "this fuction is not available for 1D data"
-
-        axis_x = []
-        for i in range(0, len(self.data[0])):
-            axis_x.append(i)
-        return axis_x
+            return "This function is not available for 1D data"
+        return list(range(len(self.data[0])))
 
 
 class ReadPlotConfig:
-    def __init__(self, config_file):
-        with open(config_file) as f:
-            a = f.read()
+    """Čte konfiguraci vykreslování (plot_config.json) bez závislosti na GUI."""
 
-        self.cfg = json.loads(a)
+    def __init__(self, config_file: str = "plot_config.json"):
+        self.cfg = load_plot_config(config_file)
 
-    def get_single_value(self):
-        return bool(strtobool(self.cfg["single"][w.g_single_config_names[0]]))
+    def get_single_value(self) -> bool:
+        return to_bool(self.cfg.get("single", {}).get(SINGLE_CONFIG_KEYS[0], False))
 
-    def get_single_fft(self):
-        return bool(strtobool(self.cfg["single"][w.g_single_config_names[1]]))
+    def get_single_fft(self) -> bool:
+        return to_bool(self.cfg.get("single", {}).get(SINGLE_CONFIG_KEYS[1], False))
 
-    def get_single_hist(self):
-        return bool(strtobool(self.cfg["single"][w.g_single_config_names[2]]))
+    def get_single_hist(self) -> bool:
+        return to_bool(self.cfg.get("single", {}).get(SINGLE_CONFIG_KEYS[2], False))
 
-    def get_single_value2d(self):
-        return bool(strtobool(self.cfg["single"][w.g_single_config_names[3]]))
+    def get_single_value2d(self) -> bool:
+        return to_bool(self.cfg.get("single", {}).get(SINGLE_CONFIG_KEYS[3], False))
 
-    def get_single_fft2d(self):
-        return bool(strtobool(self.cfg["single"][w.g_single_config_names[4]]))
+    def get_single_fft2d(self) -> bool:
+        return to_bool(self.cfg.get("single", {}).get(SINGLE_CONFIG_KEYS[4], False))
 
-    def get_single_fft_in_time(self):
-        return bool(strtobool(self.cfg["single"][w.g_single_config_names[5]]))
+    def get_single_fft_in_time(self) -> bool:
+        return to_bool(self.cfg.get("single", {}).get(SINGLE_CONFIG_KEYS[5], False))
 
-    def get_multi_value(self):
-        return bool(strtobool(self.cfg["multi"][w.g_multi_config_names[0]]))
+    def get_multi_value(self) -> bool:
+        return to_bool(self.cfg.get("multi", {}).get(MULTI_CONFIG_KEYS[0], False))
 
-    def get_multi_fft(self):
-        return bool(strtobool(self.cfg["multi"][w.g_multi_config_names[1]]))
+    def get_multi_fft(self) -> bool:
+        return to_bool(self.cfg.get("multi", {}).get(MULTI_CONFIG_KEYS[1], False))
 
-    def get_multi_hist(self):
-        return bool(strtobool(self.cfg["multi"][w.g_multi_config_names[2]]))
+    def get_multi_hist(self) -> bool:
+        return to_bool(self.cfg.get("multi", {}).get(MULTI_CONFIG_KEYS[2], False))
 
     def __str__(self):
         return str(self.cfg)
 
 
-def single_result_analysis(set_data):
-
-    print(f"Single data for analysis: {set_data}")
+def single_result_analysis(set_data: str):
+    """Zpracuje a vykreslí samostatnou veličinu na základě plot_config.json."""
+    print(f"Spouštím analýzu samostatné veličiny: {set_data}")
 
     numpy_data = ReadNMPFileData(set_data)
     plot_cfg = ReadPlotConfig("plot_config.json")
-    # config = plot_cfg.get_single_plot_config()
 
     if numpy_data.get_data_dimension() == 1:
         if plot_cfg.get_single_value():
             graph_energy(numpy_data, set_data, "val", "db")
-
         if plot_cfg.get_single_fft():
             graph_energy(numpy_data, set_data, "fft", "db")
-
         if plot_cfg.get_single_hist():
             graph_energy(numpy_data, set_data, "hist", "db")
     else:
         if plot_cfg.get_single_value():
             graph_for_pos_value(numpy_data, set_data, 0.5, "val", "db")
-
         if plot_cfg.get_single_fft():
             graph_for_pos_value(numpy_data, set_data, 0.5, "fft", "db")
-
         if plot_cfg.get_single_hist():
             graph_for_pos_value(numpy_data, set_data, 0.5, "hist", "db")
-
         if plot_cfg.get_single_value2d():
             graph2d(numpy_data, set_data, "db")
-
         if plot_cfg.get_single_fft2d():
             graph_fft2d(numpy_data, set_data)
-
         if plot_cfg.get_single_fft_in_time():
             graph2d_fft_in_time(numpy_data, set_data)
 
-    print("Single Data was processed")
+    print(f"Analýza pro '{set_data}' dokončena.")
 
 
 def multi_result_analysis(set_data: list):
-    print(f"Multiple data for analysis: {set_data}")
+    """Zpracuje a vykreslí srovnávací grafy pro více veličin najednou."""
+    print(f"Spouštím multi-analýzu pro: {set_data}")
 
     if not set_data:
-        msg = f"The list is empty"
-        print(msg)
-        return msg
+        print("Seznam multi_var je prázdný, přeskakuji.")
+        return "The list is empty"
 
     numpy_data = [ReadNMPFileData(name) for name in set_data]
     plot_cfg = ReadPlotConfig("plot_config.json")
-    # for i
-    # numpy_data = ReadNMPFileData(set_data)
-
-    # graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=False)
-    # graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=False)
-    #
-    # graph_multi_time_value(numpy_data, set_data, 0, "hist", "pic", user_id="_T0", weights_on=False, merge=True)
-    # graph_multi_time_value(numpy_data, set_data, 1, "hist", "pic", user_id="_T1", weights_on=False, merge=True)
-
-    # graph_multi_time_value(numpy_data, set_data, 0, "val", "pic", user_id="_T0", weights_on=False)
-    # graph_multi_time_value(numpy_data, set_data, 1, "val", "pic", user_id="_T1", weights_on=False)
-    #
-    # graph_multi_time_value(numpy_data, set_data, 0, "fft", "pic", user_id="_T0", weights_on=False)
-    # graph_multi_time_value(numpy_data, set_data, 1, "fft", "pic", user_id="_T1", weights_on=False)
 
     if plot_cfg.get_multi_value():
         graph_multi_time_value(numpy_data, set_data, 0, "val", "pic", user_id="_T0")
@@ -203,647 +192,434 @@ def multi_result_analysis(set_data: list):
 
     if plot_cfg.get_multi_hist():
         graph_multi_time_value(numpy_data, set_data, 0, "hist", "db", user_id="_T0", weights_on=True, merge=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.1, "hist", "pic", user_id="_T01", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.2, "hist", "pic", user_id="_T02", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.3, "hist", "pic", user_id="_T03", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.4, "hist", "pic", user_id="_T04", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.5, "hist", "pic", user_id="_T05", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.6, "hist", "pic", user_id="_T06", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.7, "hist", "pic", user_id="_T07", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.8, "hist", "pic", user_id="_T08", weights_on=False)
-        # graph_multi_time_value(numpy_data, set_data, 0.9, "hist", "pic", user_id="_T09", weights_on=False)
         graph_multi_time_value(numpy_data, set_data, 1, "hist", "db", user_id="_T1", weights_on=True, merge=False)
 
-    print("Multi Data was processed")
+    print("Multi-analýza dokončena.")
     return "Multi Data was processed"
 
 
-def graph_for_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id=""):
-    """Generates a graph for a given dataset at a specific time with optional FFT analysis.
-
-        Args:
-            numpy_data: Object containing the dataset.
-            set_data: String representing the dataset name.
-            T: Time index factor (1 means last entry).
-            fft: Boolean flag to enable FFT analysis.
-            units: Unit system ("si", "pic", "db").
-
-        Returns:
-            Saves the generated plot to a file.
-        """
-
-    # Retrieve data
+def graph_for_time_value(numpy_data, set_data, T, res_type="val", units="si", user_id=""):
+    """Vykreslí prostorový řez veličinou v daném čase T (kde T in <0, 1>)."""
     var_data = numpy_data.get_data_x_t()
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    img_folder = parameters["output_folder"]
-    save_graph = parameters["save_graphs"]
+    cfg = load_config()
+    img_folder = cfg.get("output_folder", "")
+    save_graph = to_bool(cfg.get("save_graphs", True))
 
+    if not (0 <= T <= 1):
+        return f"Neplatná hodnota T = {T}, povolený rozsah je <0, 1>"
 
-    # Determine the time index (x_level)
-    if T > 1 or T < 0:
-        return f"Invalid T value: T = {units}, valid values are between <{0}, {1}>"
     x_level = -1 if T == 1 else int(len(var_data) * T)
 
-    # Get time axis and convert to SI units
     axis_time = numpy_data.get_time_axis()
-    calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
+    om_pi = unit.ion.get_plasma_frequency()
+    calculation_time = (axis_time[x_level] / om_pi) if om_pi > 0 else axis_time[x_level]
 
-    # Retrieve length axis only once (avoids redundant function calls)
     length_data = numpy_data.get_length_axis()
-
     axis_x, label_x = convert_x_axis(length_data, units)
     axis_z, label_z = convert_z_axis(var_data[x_level], set_data, units)
 
-
-    # Construct axis labels and file name
     z_axis_name = set_data.split("_")[0]
-    axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
+    axis_name_label = g_axis_name.get(z_axis_name, z_axis_name)
+    axis_z_name = f"{axis_name_label} [{label_z}]"
     save_file_name = f"{set_data}_lenDevel{user_id}.png"
 
-    # **Plot Data**
     if res_type == "fft":
-        # Safely extract the unit inside square brackets
-        # _, _, unit_part = label_x.partition("[")    # Splits into three parts: before "[", the "[", and after "["
-        # unit1, _, _ = unit_part.partition("]")      # Extracts the unit inside brackets
-        # unit1 = unit1.strip()                       # Trim whitespace for safety
-
         description = ploting.PlotDescription(
             f"Frequency Spectrum for {set_data}; t = {round(calculation_time * 1000, 1)} ms",
-            fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
+            fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
+            "Magnitude",
+        )
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
-        ploting.plot_fft(axis_x, axis_z, description, save_graph, img_folder+fft_file_name)
+        ploting.plot_fft(axis_x, axis_z, description, save_graph, os.path.join(img_folder, fft_file_name))
     elif res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
             f"Histogram for {set_data}; t = {round(calculation_time * 1000, 1)} ms",
-            axis_z_name, "f(u)")
-        ploting.plot_histogram(axis_z, 4096, description_hist, save_graph, img_folder+save_file_name)
-
+            axis_z_name,
+            "f(u)",
+        )
+        ploting.plot_histogram(axis_z, 4096, description_hist, [1.0] * len(axis_z), save_graph, os.path.join(img_folder, save_file_name))
     elif res_type == "val":
-        description = ploting.PlotDescription(f"Cut data {set_data} for t = {round(calculation_time * 1000, 3)} ms",
-                                          label_x, axis_z_name)
-        ploting.plot_data(axis_x, axis_z, description, save_graph, img_folder+save_file_name)
+        description = ploting.PlotDescription(
+            f"Cut data {set_data} for t = {round(calculation_time * 1000, 3)} ms",
+            label_x,
+            axis_z_name,
+        )
+        ploting.plot_data(axis_x, axis_z, description, save_graph, os.path.join(img_folder, save_file_name))
     else:
-        return f"Type of data for graph: {res_type} is not implemented"
+        return f"Typ grafu '{res_type}' není implementován"
 
 
-def graph_multi_time_value(numpy_data, set_data, T, res_type = "val", units="si", user_id="", weights_on=True, merge=False):
-    """Generates a graph for a given dataset at a specific time with optional FFT analysis.
+def graph_multi_time_value(numpy_data, set_data, T, res_type="val", units="si", user_id="", weights_on=True, merge=False):
+    """Vykreslí srovnávací graf pro více veličin v daném čase T."""
+    cfg = load_config()
+    img_folder = cfg.get("output_folder", "")
+    save_graph = to_bool(cfg.get("save_graphs", True))
 
-        Args:
-            numpy_data: Object containing the dataset.
-            set_data: String representing the dataset name.
-            T: Time index factor (1 means last entry).
-            fft: Boolean flag to enable FFT analysis.
-            units: Unit system ("si", "pic", "db").
-
-        Returns:
-            Saves the generated plot to a file.
-        """
-    if not isinstance(numpy_data, list):
-        numpy_data = [numpy_data]
-
-    if not isinstance(set_data, list):
-        set_data = [set_data]
-
-
-    # Retrieve data
-    var_data = [data.get_data_x_t() for data in numpy_data]
-    # var_data = numpy_data.get_data_x_t()
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    img_folder = parameters["output_folder"]
-    save_graph = parameters["save_graphs"]
-
-    # Determine the time index (x_level)
-    if T > 1 or T < 0:
-        return f"Invalid T value: T = {units}, valid values are between <{0}, {1}>"
-    x_level = -1 if T == 1 else int(len(var_data[0]) * T)
-
-    # Get time axis and convert to SI units
-    axis_time = numpy_data[0].get_time_axis()
-    if units == "si":
-        calculation_time = axis_time[x_level] * 1 / unit.ion.get_plasma_frequency()
-        title_unit = f"{round(calculation_time * 1000, 0)} ms"
-    elif units == "db":
-        axis_t, label_t = convert_t_axis(axis_time, "db")
-        u = fr"$[{label_t.split('[')[-1]}"
-        calculation_time = axis_t[x_level]
-        title_unit = f"{round(calculation_time, 0)} {u}"
-    else:
-        axis_t, label_t = convert_t_axis(axis_time, "pic")
-        u = fr"$[{label_t.split('[')[-1]}"
-        calculation_time = axis_time[x_level]
-        title_unit = f"{round(calculation_time, 1)} {u}"
-
-
-    # Retrieve length axis only once (avoids redundant function calls)
-    length_data = numpy_data[0].get_length_axis()
-
-    units = "pic"
-    axis_x, label_x = convert_x_axis(length_data, units)
-    axis_z, label_z = zip(*[convert_z_axis(v[x_level], set_data[i], units) for i, v in enumerate(var_data)])
-
-
-    # Construct axis labels and file name
-    z_axis_name = set_data[0].split("_")[0]
-
-    # print(int("abc"))
+    axis_x = []
+    axis_z = []
     data_labels = []
     weights = []
-    for i, s in enumerate(set_data):
-        name = s.split("_")[0]
-        try:
-            second_name = int(s.split("_")[1])
-            # z_axis_name = z_axis_name + '_' + str(second_name)
-            # print(f"z_axis_name: {name}")
-            two_part_name = name + '_' + str(second_name)
-            data_labels.append(f"{g_axis_name[two_part_name]}")
 
-            if weights_on:
-                print(f"add weights {g_hist_weights[two_part_name]} to {two_part_name}")
-                weights.append([float(g_hist_weights[two_part_name]) for _ in range(len(axis_z[i]))])
-            else:
-                weights.append([1.0 for _ in range(len(axis_z[i]))])
+    for idx, d in enumerate(numpy_data):
+        var_data = d.get_data_x_t()
+        x_level = -1 if T == 1 else int(len(var_data) * T)
 
+        axis_time = d.get_time_axis()
+        om_pi = unit.ion.get_plasma_frequency()
+        calculation_time = (axis_time[x_level] / om_pi) if om_pi > 0 else axis_time[x_level]
 
-        except:
-            print("except activated")
-            data_labels.append(f"{g_axis_name[name]}")
+        time_om = axis_time[x_level] * unit.electron.get_plasma_frequency() / (2.0 * math.pi)
 
-    # print(data_labels)
-    axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z[0]}]"
-    title_set_data = z_axis_name
-    save_file_name = f"{title_set_data}_lenDevel{user_id}.png"
-    # title_set_data = ""
-    # for s in set_data:
-    #     title_set_data = title_set_data + s + ", "
+        length_data = d.get_length_axis()
+        ax_x, label_x = convert_x_axis(length_data, units)
+        ax_z, label_z = convert_z_axis(var_data[x_level], set_data[idx], units)
 
+        axis_x.append(ax_x)
+        axis_z.append(ax_z)
 
-    # **Plot Data**
-    if res_type == "fft":
-        # Safely extract the unit inside square brackets
-        # _, _, unit_part = label_x.partition("[")    # Splits into three parts: before "[", the "[", and after "["
-        # unit1, _, _ = unit_part.partition("]")      # Extracts the unit inside brackets
-        # unit1 = unit1.strip()                       # Trim whitespace for safety
+        category = set_data[idx].split("_")[0]
+        full_cat = "_".join(set_data[idx].split("_")[:2]) if len(set_data[idx].split("_")) > 2 else category
+        name_label = g_axis_name.get(full_cat, g_axis_name.get(category, set_data[idx]))
+        data_labels.append(name_label)
 
-        description = ploting.PlotDescription(
-            f"Frequency Spectrum for {title_set_data}; t = {title_unit}",
-            fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", "Magnitude")
-        description.multidata_labels(data_labels)
-        fft_file_name = read.add_suffix(save_file_name, "_fft.")
-        ploting.plot_fft(axis_x, axis_z, description, save_graph, img_folder+fft_file_name)
-    elif res_type == "hist":
+        if weights_on:
+            w_val = g_hist_weights.get(full_cat, g_hist_weights.get(category, 1.0))
+            weights.append(np.ones(len(ax_z)) * w_val)
+        else:
+            weights.append(np.ones(len(ax_z)))
+
+    title_set_data = " & ".join(set_data)
+    axis_z_name = f"{label_z}"
+    save_file_name = f"multi_{title_set_data}_t{T}{user_id}.png"
+
+    if res_type == "hist":
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
-            f"Histogram for {title_set_data}; t = {title_unit}",
-            axis_z_name, "f(u)")
+            f"Histogram for {title_set_data}; t = {round(time_om, 2)} [2pi/om_pe]",
+            axis_z_name,
+            "f(u)",
+        )
         description_hist.multidata_labels(data_labels)
-        description_hist.set_xlim(-0.03, 0.03)
-        description_hist.set_ylim(0, 250)
 
         if merge:
             merged = np.concatenate(axis_z, axis=None)
-            weights = [1.0 for _ in range(len(merged))]
-
-            for a in axis_z:
-                print(f"len: {len(a)}")
-            print(f"merged len: {len(merged)}")
+            m_weights = np.ones(len(merged))
             save_file_name = "merged_" + save_file_name
-            ploting.plot_histogram(merged, 4096, description_hist, weights, save_graph, img_folder + save_file_name)
+            ploting.plot_histogram(merged, 4096, description_hist, m_weights, save_graph, os.path.join(img_folder, save_file_name))
         else:
-            ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, img_folder+save_file_name)
-
+            ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, os.path.join(img_folder, save_file_name))
     elif res_type == "val":
-        description = ploting.PlotDescription(f"Cut data {title_set_data} for t = {round(calculation_time * 1000, 3)} ms",
-                                          label_x, axis_z_name)
+        description = ploting.PlotDescription(
+            f"Cut data {title_set_data} for t = {round(calculation_time * 1000, 3)} ms",
+            label_x,
+            axis_z_name,
+        )
         description.multidata_labels(data_labels)
-        ploting.plot_data(axis_x, axis_z, description, save_graph, img_folder+save_file_name)
-    else:
-        return f"Type of data for graph: {res_type} is not implemented"
+        ploting.plot_data(axis_x[0], axis_z, description, save_graph, os.path.join(img_folder, save_file_name))
 
 
-def graph_for_pos_value(numpy_data, set_data, N, res_type = "val", units="si", user_id=""):
-    """Generates a graph for a given dataset at a specific time with optional FFT analysis.
-
-        Args:
-            numpy_data: Object containing the dataset.
-            set_data: String representing the dataset name.
-            T: Time index factor (1 means last entry).
-            fft: Boolean flag to enable FFT analysis.
-            units: Unit system ("si", "pic", "db").
-
-        Returns:
-            Saves the generated plot to a file.
-        """
-
-    # Retrieve data
+def graph_for_pos_value(numpy_data, set_data, N, res_type="val", units="si", user_id=""):
+    """Vykreslí časový vývoj v dané prostorové poloze N (kde N in <0, 1>)."""
     var_data = numpy_data.get_data_x_t()
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    img_folder = parameters["output_folder"]
-    save_graph = parameters["save_graphs"]
+    cfg = load_config()
+    img_folder = cfg.get("output_folder", "")
+    save_graph = to_bool(cfg.get("save_graphs", True))
 
-    # with open("parameters_hdf5.json", "r") as file:
-    #     parameters = json.load(file)
-    setting = read.ReadHDFSettings(parameters["result_folder"] + "settings.hdf")
+    settings_path = os.path.join(cfg.get("result_folder", ""), "settings.hdf")
+    setting = read.ReadHDFSettings(settings_path)
     nx = setting.get_num_cells("x")
     Lx = setting.get_box_size("x")
 
-    # print(f"len: {len(var_data)}")
+    if not (0 <= N <= 1):
+        return f"Neplatná hodnota N = {N}, povolený rozsah je <0, 1>"
 
-    # Determine the time index (x_level)
-    if N > 1 or N < 0:
-        return f"Invalid N value: N = {units}, valid values are between <{0}, {1}>"
     x_level = -1 if N == 1 else int(len(var_data[0]) * N)
+    var_data1d = var_data[:, x_level] if isinstance(var_data, np.ndarray) else [float(d[x_level]) for d in var_data]
 
-    var_data1d = [float(d[x_level]) for d in var_data]
-    # print(f"len var1d: {len(var_data1d)}")
-
-    # Get time axis and convert to set units
     axis_position = numpy_data.get_length_axis()
     if units == "si":
-        calculation_time = axis_position[x_level] * unit.ion.get_ion_skin_depth() * Lx / nx
-        title_unit = f"{round(calculation_time, 2)} m"
+        calc_pos = (axis_position[x_level] * unit.ion.get_ion_skin_depth() * Lx / nx) if nx > 0 else axis_position[x_level]
+        title_unit = f"{round(calc_pos, 2)} m"
     elif units == "db":
-        axis_x, label_x = convert_x_axis(axis_position, "db")
-        calculation_time = axis_x[x_level]
-        u = fr"$[{label_x.split('[')[-1]}"
-        # print(f"--------------------------------- {u[:-2]}")
-        title_unit = f"{round(calculation_time, 0)} {u}"
+        ax_x, lbl_x = convert_x_axis(axis_position, "db")
+        calc_pos = ax_x[x_level]
+        title_unit = f"{round(calc_pos, 0)} lambda_D"
     else:
-        calculation_time = axis_position[x_level]
-        title_unit = f"{round(calculation_time, 0)} isd"
+        calc_pos = axis_position[x_level]
+        title_unit = f"{round(calc_pos, 0)} isd"
 
-
-    # Retrieve length axis only once (avoids redundant function calls)
-    # length_data = numpy_data.get_length_axis()
     time_data = numpy_data.get_time_axis()
-
-
     axis_t, label_t = convert_t_axis(time_data, units)
     axis_z, label_z = convert_z_axis(var_data1d, set_data, units)
 
-
-    # Construct axis labels and file name
     z_axis_name = set_data.split("_")[0]
-    axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
+    axis_name_label = g_axis_name.get(z_axis_name, z_axis_name)
+    axis_z_name = f"{axis_name_label} [{label_z}]"
     save_file_name = f"{set_data}_timeDevel{user_id}.png"
 
-    # **Plot Data**
     if res_type == "fft":
-        # Safely extract the unit inside square brackets
-        # _, _, unit_part = label_x.partition("[")    # Splits into three parts: before "[", the "[", and after "["
-        # unit1, _, _ = unit_part.partition("]")      # Extracts the unit inside brackets
-        # unit1 = unit1.strip()                       # Trim whitespace for safety
-
         description = ploting.PlotDescription(
-            f"Frequency Spectrum for {set_data}; x = {round(calculation_time, 1)} m",
-            fr"$Wavenumber~~[{extract_unit_from_label(label_t)}^{{-1}}]$", "Magnitude")
+            f"Frequency Spectrum for {set_data}; x = {title_unit}",
+            fr"$Frequency~~[{extract_unit_from_label(label_t)}^{{-1}}]$",
+            "Magnitude",
+        )
         fft_file_name = read.add_suffix(save_file_name, "_fft.")
-        ploting.plot_fft(axis_t, axis_z, description, save_graph, img_folder+fft_file_name)
+        ploting.plot_fft(axis_t, axis_z, description, save_graph, os.path.join(img_folder, fft_file_name))
     elif res_type == "hist":
-        weights = [1.0 for _ in range(len(axis_z))]
-        # weights.append([1.0 for _ in range(len(axis_z))])
-
         save_file_name = "hist_" + save_file_name
         description_hist = ploting.PlotDescription(
-            f"Histogram for {set_data}; x = {round(calculation_time , 1)} m",
-            axis_z_name, "Magnitude")
-        ploting.plot_histogram(axis_z, 4096, description_hist, weights, save_graph, img_folder+save_file_name)
-
+            f"Histogram for {set_data}; x = {title_unit}",
+            axis_z_name,
+            "Magnitude",
+        )
+        ploting.plot_histogram(axis_z, 4096, description_hist, [1.0] * len(axis_z), save_graph, os.path.join(img_folder, save_file_name))
     elif res_type == "val":
-        description = ploting.PlotDescription(f"Cut data {set_data} for x = {title_unit}",
-                                          label_t, axis_z_name)
-        ploting.plot_data(axis_t, axis_z, description, save_graph, img_folder+save_file_name)
-    elif res_type == "val_ms":
-        if units == "si":
-            label_t_ms = label_t.replace("[s]", "[ms]")
-        else:
-            raise Exception(f"For type {res_type} has to be chosen SI units, units=si")
-
-        description = ploting.PlotDescription(f"Cut data {set_data} for x = {title_unit}",
-                                          label_t_ms, axis_z_name)
-        axis_t_ms = unit_convert.rescale_list(axis_t,1000)
-        ploting.plot_data(axis_t_ms, axis_z, description, save_graph, img_folder+save_file_name)
-    else:
-        return f"Type of data for graph: {res_type} is not implemented"
+        description = ploting.PlotDescription(
+            f"Cut data {set_data} for x = {title_unit}",
+            label_t,
+            axis_z_name,
+        )
+        ploting.plot_data(axis_t, axis_z, description, save_graph, os.path.join(img_folder, save_file_name))
 
 
-def graph2d(numpy_data, set_data, result_units = "db", user_id=""):
-    """Generate a 2D time-space graph from numpy data and save as an image."""
-
-    # Extract raw data
+def graph2d(numpy_data, set_data, result_units="db", user_id=""):
+    """Vykreslí 2D časoprostorový vývoj veličiny."""
     var_data = numpy_data.get_data_x_t()
     time_data = numpy_data.get_time_axis()
     length_data = numpy_data.get_length_axis()
 
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    img_folder = parameters["output_folder"]
-    save_graph = parameters["save_graphs"]
+    cfg = load_config()
+    img_folder = cfg.get("output_folder", "")
+    save_graph = to_bool(cfg.get("save_graphs", True))
 
-
-    # print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
-
-    # Extract y-axis label (first part of set_data before '_')
     y_axis_name = set_data.split("_")[0]
     save_file_name = f"{set_data}_2d_timeDevel{user_id}.png"
 
-    # Convert axes based on selected units
     axis_x, label_x = convert_x_axis(length_data, result_units)
     axis_y, label_y = convert_t_axis(time_data, result_units)
     axis_z, label_z_unit = convert_z_axis(var_data, set_data, result_units)
 
-    label_z = f"{g_axis_name[y_axis_name]} [{label_z_unit}]"
-
-
-    # Define plot description
+    label_z = f"{g_axis_name.get(y_axis_name, y_axis_name)} [{label_z_unit}]"
     descr3D = ploting.PlotDescription(f"Time development through space for {set_data}", label_x, label_y, label_z)
-    descr3D.set_ylim(read.min_value(var_data), read.max_value(var_data))
 
-    # Plot and save the figure
-    ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, save_graph, img_folder+save_file_name)
+    ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, save_graph, os.path.join(img_folder, save_file_name))
 
 
-def graph2d_fft_in_time(numpy_data, set_data, result_units = "db", wire_plot: bool = False, user_id=""):
-    """Generate a 2D time-space graph from numpy data and save as an image."""
-
-    # Extract raw data
+def graph2d_fft_in_time(numpy_data, set_data, result_units="db", wire_plot: bool = False, user_id=""):
+    """Vykreslí časový vývoj prostorového vlnového spektra (k vs. t)."""
     var_data = numpy_data.get_data_x_t()
     time_data = numpy_data.get_time_axis()
     length_data = numpy_data.get_length_axis()
 
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    img_folder = parameters["output_folder"]
-    save_graph = parameters["save_graphs"]
+    cfg = load_config()
+    img_folder = cfg.get("output_folder", "")
+    save_graph = to_bool(cfg.get("save_graphs", True))
 
     raw_axis_x, label_x = convert_x_axis(length_data, result_units)
 
     axis_z = []
-    for level in range(0,len(var_data)):
-        raw_axis_z, label_z_unit = convert_z_axis(var_data[level], set_data, result_units)
+    fft_axis_x = None
+    for level in range(len(var_data)):
+        raw_axis_z, _ = convert_z_axis(var_data[level], set_data, result_units)
         fft_axis_x, fft_axis_z = fft_data_transform(raw_axis_x, raw_axis_z)
         axis_z.append(fft_axis_z)
 
-
-    # Extract y-axis label (first part of set_data before '_')
-    y_axis_name = set_data.split("_")[0]
     save_file_name = f"{set_data}_2d_freqDevel{user_id}.png"
-
-    # Convert axes based on selected units
-    axis_x = fft_axis_x
+    axis_x = fft_axis_x if fft_axis_x is not None else []
     axis_y, label_y = convert_t_axis(time_data, result_units)
-    label_z = f"{g_axis_name[y_axis_name]} [{label_z_unit}]"
-    label_z = f"Spectral energy [(V/m)·m]"
+    label_z = "Spectral energy [(V/m)·m]"
 
-    # Define plot description
-    descr3D = ploting.PlotDescription(f"Time development through space for {set_data}",
-                                      fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$", label_y, label_z)
-    # descr3D.set_ylim(read.min_value(var_data), read.max_value(var_data))
+    descr3D = ploting.PlotDescription(
+        f"Time development of wave spectrum for {set_data}",
+        fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
+        label_y,
+        label_z,
+    )
 
-    # Plot and save the figure
     if wire_plot:
-        ploting.plot3Dwire_data(axis_x, axis_y, axis_z, descr3D, save_graph, img_folder+save_file_name)
+        ploting.plot3Dwire_data(axis_x, axis_y, axis_z, descr3D, save_graph, os.path.join(img_folder, save_file_name))
     else:
-        ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, save_graph, img_folder+save_file_name)
+        ploting.plot3Dplane_data(axis_x, axis_y, axis_z, descr3D, save_graph, os.path.join(img_folder, save_file_name))
 
 
-def graph_fft2d(numpy_data, set_data, result_units = "db", user_id=""):
-    """Generate a 2D time-space graph from numpy data and save as an image."""
-
-    # Extract raw data
+def graph_fft2d(numpy_data, set_data, result_units="db", user_id=""):
+    """Provede 2D FFT v prostoru a čase a vykreslí (k, omega) disperzní diagram."""
     var_data = numpy_data.get_data_x_t()
     time_data = numpy_data.get_time_axis()
     length_data = numpy_data.get_length_axis()
 
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    img_folder = parameters["output_folder"]
-    save_graph = parameters["save_graphs"]
+    cfg = load_config()
+    img_folder = cfg.get("output_folder", "")
+    save_graph = to_bool(cfg.get("save_graphs", True))
 
-    # print(f"plasma_frequency: {unit.ion.get_plasma_frequency()}")
-
-    # Extract y-axis label (first part of set_data before '_')
-    # y_axis_name = set_data.split("_")[0]
     save_file_name = f"{set_data}_2d_fft{user_id}.png"
 
-    # Convert axes based on selected units
     axis_x, label_x = convert_x_axis(length_data, result_units)
     axis_y, label_y = convert_t_axis(time_data, result_units)
-    # axis_z, label_z_unit = convert_z_axis(var_data, result_units)
 
-    # label_z = f"{g_axis_name[y_axis_name]} [{label_z_unit}]"
-
-    # FFT Processing
-    fft_results = read.fft_2d(np.array(var_data), axis_x, axis_y)
+    fft_results = read.fft_2d(np.asarray(var_data), axis_x, axis_y)
     if not fft_results:
-        return  # Exit early if FFT fails
+        return
 
     E_fft_shifted, kx_shifted, ky_shifted = fft_results
 
-    # xx_c, tt_c, zz_c = map(extract_half, (kx_shifted, ky_shifted, np.abs(E_fft_shifted)))
-    #
-    # print(f"FFT 2D Plane: {len(kx_shifted)} x {len(ky_shifted)}")
-    # print(f"Processed Data Plane: {len(zz_c[0])} x {len(zz_c)}")
-    #
-    # # Downsampling factors (adjust as needed)
-    # scale_x, scale_t, scale_z = 40, 200, 4
-    #
-    # # Reduce dataset size
-    # xx_c1, tt_c1 = xx_c[:len(xx_c) // scale_x], tt_c[:len(tt_c) // scale_t]
-    # zz_c1 = [sublist[:len(sublist) // scale_x] for sublist in zz_c[:len(zz_c) // scale_t]]
+    # Kladný poloprostor pro frekvence a vlnová čísla
+    mag_fft = np.abs(E_fft_shifted)
+    ny_half = len(ky_shifted) // 2
+    nx_half = len(kx_shifted) // 2
 
+    positive_semi_space_x = kx_shifted[nx_half:]
+    positive_semi_space_y = ky_shifted[ny_half:]
+    positive_semi_space_z = mag_fft[ny_half:, nx_half:]
 
-    # print("PRINT FFT 2D")
-
-        # zz = np.abs(E_fft_shifted)
-    # tt = ky_shifted
-    # xx = kx_shifted
-    positive_semi_space_z_tdir = [sublist[len(sublist) // 2:] for sublist in np.abs(E_fft_shifted)]
-
-    positive_semi_space_x = kx_shifted[len(kx_shifted) // 2:]
-    positive_semi_space_y = ky_shifted[len(ky_shifted) // 2:]
-    positive_semi_space_z = positive_semi_space_z_tdir[len(positive_semi_space_z_tdir) // 2:]
-
-    # print(f"plane xt: {len(kx_shifted)} x {len(ky_shifted)}")
-    # print(f"data plane: {len(np.abs(E_fft_shifted)[0])} x {len(np.abs(E_fft_shifted))}")
-    # print("planes after cut off")
-    # print(f"plane xt: {len(xx_c)} x {len(tt_c)}")
-    # print(f"data plane: {len(zz_c[0])} x {len(zz_c)}")
-
-    scale_x = 40
-    scale_t = 50
-    scale_z = 50
-    # scale_x = 1
-    # scale_t = 1
-    # scale_z = 60
-
-    # res_axis_x = positive_semi_space_x[:len(positive_semi_space_x) // scale_x]
-    # res_axis_y = positive_semi_space_y[:len(positive_semi_space_y) // scale_t]
-    # res_axis_z = positive_semi_space_z[:len(positive_semi_space_z) // scale_z]
-    # res_axis_z = positive_semi_space_z[:len(positive_semi_space_z)]
-
+    # Adaptivní zobrazení rezonanční oblasti
     scale_x = 0.05
     scale_t = 0.02
 
-    res_axis_x = positive_semi_space_x[:int(len(positive_semi_space_x)*scale_x)]
-    res_axis_y = positive_semi_space_y[:int(len(positive_semi_space_y)*scale_t)]
-    res_axis_z = []
-    for z in range(0, int(len(positive_semi_space_z)*scale_t)):
-        res_axis_z.append(positive_semi_space_z[z][:int(len(positive_semi_space_z[z])*scale_x)])
+    end_x = max(2, int(len(positive_semi_space_x) * scale_x))
+    end_y = max(2, int(len(positive_semi_space_y) * scale_t))
 
-    # res_axis_x = positive_semi_space_x
-    # res_axis_y = positive_semi_space_y
-    # res_axis_z = positive_semi_space_z
+    res_axis_x = positive_semi_space_x[:end_x]
+    res_axis_y = positive_semi_space_y[:end_y]
+    res_axis_z = positive_semi_space_z[:end_y, :end_x]
 
-    print(f"res_axis_z[0]: {res_axis_z[0]}")
-    label_z = f"Spectral energy [(V/m)·s·m]"
+    label_z = "Spectral energy [(V/m)·s·m]"
     unit_y = r"$Frequency~~[\omega_{pe}]$"
-    descr3D = ploting.PlotDescription(fr"$FFT~2D~result~of~{set_data}$", fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
-                                          unit_y,
-                                          label_z)
-        # descr3D.set_ylim(read.min_value(data_x_t), read.max_value(data_x_t))
-    ploting.plot3Dplane_data(res_axis_x, res_axis_y, res_axis_z, descr3D, save_graph,
-        img_folder + save_file_name, scale_z)
+    descr3D = ploting.PlotDescription(
+        fr"$FFT~2D~result~of~{set_data}$",
+        fr"$Wavenumber~~[{extract_unit_from_label(label_x)}^{{-1}}]$",
+        unit_y,
+        label_z,
+    )
+    ploting.plot3Dplane_data(res_axis_x, res_axis_y, res_axis_z, descr3D, save_graph, os.path.join(img_folder, save_file_name), max_bar_val=50)
 
 
-def graph_energy(numpy_data, set_data, res_type = "val", units="si", user_id=""):
-
+def graph_energy(numpy_data, set_data, res_type="val", units="si", user_id=""):
+    """Vykreslí časový vývoj integrální energie."""
     energy_data = numpy_data.get_data_x_t()
     time_data = numpy_data.get_time_axis()
     axis_t, label_t = convert_t_axis(time_data, units)
     axis_z, label_z = convert_z_axis(energy_data, set_data, units)
 
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    img_folder = parameters["output_folder"]
-    save_graph = parameters["save_graphs"]
+    cfg = load_config()
+    img_folder = cfg.get("output_folder", "")
+    save_graph = to_bool(cfg.get("save_graphs", True))
     save_file_name = f"{set_data}{user_id}.png"
 
-    z_axis_name = set_data
-
     if res_type == "val":
-        axis_z_name = f"{g_axis_name[z_axis_name]} [{label_z}]"
-        # print(f"axis_z_name: {axis_z_name}")
-        description = ploting.PlotDescription(f"Time development {g_axis_name[set_data]}", label_t, axis_z_name)
-        ploting.plot_data(axis_t, axis_z, description, save_graph, img_folder + save_file_name)
+        name_label = g_axis_name.get(set_data, set_data)
+        axis_z_name = f"{name_label} [{label_z}]"
+        description = ploting.PlotDescription(f"Time development of {name_label}", label_t, axis_z_name)
+        ploting.plot_data(axis_t, axis_z, description, save_graph, os.path.join(img_folder, save_file_name))
     else:
-        raise Exception(f"Type of data for graph: {res_type} is not implemented")
+        raise ValueError(f"Typ grafu '{res_type}' není pro energii implementován")
 
 
 # --------------------------------------------------------------------------------------------
+# POMOCNÉ FUNKCE PŘEPOČTU OS A JEDNOTEK
 # --------------------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------------------
-#                                   HELP FUNCTIONS
+
 def convert_x_axis(axis_x, units="si"):
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-    setting = read.ReadHDFSettings(parameters["result_folder"] + "settings.hdf")
+    cfg = load_config()
+    settings_path = os.path.join(cfg.get("result_folder", ""), "settings.hdf")
+    setting = read.ReadHDFSettings(settings_path)
     nx = setting.get_num_cells("x")
     Lx = setting.get_box_size("x")
 
-    # Lx = 0.5
-    # nx = 4096
+    d_i = unit.ion.get_ion_skin_depth()
+    debye_len = unit.debye_len
+    dx_si = (d_i * Lx / nx) if nx > 0 else 1.0
 
     match units:
         case "pic":
-            unit_x = r"$Length~~[isd]$"
-            return [axis_x, unit_x]
+            return [axis_x, r"$Length~~[d_i]$"]
         case "si":
-            axis_x_SI = unit_convert.rescale_list(axis_x, unit.ion.get_ion_skin_depth() * Lx / nx)
-            unit_x = r"$Length~~[m]$"
-            return [axis_x_SI, unit_x]
+            axis_x_SI = unit_convert.rescale_list(axis_x, dx_si)
+            return [axis_x_SI, r"$Length~~[m]$"]
         case "db":
-            axis_x_SI = unit_convert.rescale_list(axis_x, unit.ion.get_ion_skin_depth() * Lx / nx)
-            axis_x_DB = unit_convert.rescale_list(axis_x_SI, 1 / unit.debye_len)
-            unit_x = r"$Length~~[\lambda_{D}]$"
-            return [axis_x_DB, unit_x]
+            axis_x_SI = unit_convert.rescale_list(axis_x, dx_si)
+            axis_x_DB = unit_convert.rescale_list(axis_x_SI, 1.0 / debye_len) if debye_len > 0 else axis_x_SI
+            return [axis_x_DB, r"$Length~~[\lambda_{D}]$"]
         case _:
-            return f"Invalid unit type: {units}"
+            return [axis_x, f"Invalid unit type: {units}"]
 
 
 def convert_t_axis(axis_time, units="si"):
+    om_pi = unit.ion.get_plasma_frequency()
+    om_pe = unit.electron.get_plasma_frequency()
+
     match units:
         case "pic":
-            unit_y = r"$Time~~[1/\omega_{pi}]$"
-            return [axis_time, unit_y]
+            return [axis_time, r"$Time~~[1/\omega_{pi}]$"]
         case "si":
-            axis_time_SI = unit_convert.rescale_list(axis_time, 1 / unit.ion.get_plasma_frequency())
-            unit_y = r"$Time~~[s]$"
-            return [axis_time_SI, unit_y]
+            t_scale = (1.0 / om_pi) if om_pi > 0 else 1.0
+            axis_time_SI = unit_convert.rescale_list(axis_time, t_scale)
+            return [axis_time_SI, r"$Time~~[s]$"]
         case "db":
-            axis_time_SI = unit_convert.rescale_list(axis_time, 1 / unit.ion.get_plasma_frequency())
-            # axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency())
-            unit_y = r"$Time~~[2\pi/\omega_{pe}]$"
-
-            axis_time_OM = unit_convert.rescale_list(axis_time_SI, unit.electron.get_plasma_frequency() / (2 * math.pi))
-            # unit_y = r"$Time~~[1/f_{pe}]$"
-            return [axis_time_OM, unit_y]
+            t_scale = (1.0 / om_pi) if om_pi > 0 else 1.0
+            axis_time_SI = unit_convert.rescale_list(axis_time, t_scale)
+            pe_factor = (om_pe / (2.0 * math.pi)) if om_pe > 0 else 1.0
+            axis_time_OM = unit_convert.rescale_list(axis_time_SI, pe_factor)
+            return [axis_time_OM, r"$Time~~[2\pi/\omega_{pe}]$"]
         case _:
-            return f"Invalid unit type: {units}"
+            return [axis_time, f"Invalid unit type: {units}"]
 
 
 def convert_z_axis(axis_y, set_data, units="si"):
     variable = set_data.split("_")[0]
+    category_full = "_".join(set_data.split("_")[:2]) if len(set_data.split("_")) > 2 else variable
 
     scale_factors = {
-        "T": unit.c1.b_field_const,
-        "m/s": unit.c1.vel_const,
-        "V/m": unit.c1.e_field_const,
-        "J": unit.c1.energy_const,
-        "J/m3": unit.c1.energy_const,
-        "A/m": unit.c1.charge_const,
+        "T": getattr(unit.c1, "b_field_const", 1.0),
+        "m/s": getattr(unit.c1, "vel_const", unit.const_c),
+        "V/m": getattr(unit.c1, "e_field_const", 1.0),
+        "J": getattr(unit.c1, "energy_const", 1.0),
+        "J/m3": getattr(unit.c1, "energy_const", 1.0),
+        "A/m": getattr(unit.c1, "charge_const", 1.0),
+        "A/m2": getattr(unit.c1, "charge_const", 1.0),
     }
-    # print(f"convert_z_axis.variable: {variable}")
+
     match units:
         case "pic":
-            axis_z_data = axis_y
-            unit_z = g_axis_pic_units[variable]
-            # print(f"unit_y PIC: {unit_z}")
-            return [axis_z_data, unit_z]
+            unit_z = g_axis_pic_units.get(category_full, g_axis_pic_units.get(variable, "sim"))
+            return [axis_y, unit_z]
         case "si" | "db":
-            unit_z = g_axis_si_units[variable]
-            print(f"unit_z: {unit_z}")
-            scale = scale_factors.get(unit_z)
-            if scale:
-                axis_z_data = unit_convert.rescale_list(axis_y, scale)
-            else:
-                axis_z_data = axis_y  # fallback to original if unit not found
-
+            unit_z = g_axis_si_units.get(category_full, g_axis_si_units.get(variable, "1"))
+            scale = scale_factors.get(unit_z, 1.0)
+            axis_z_data = unit_convert.rescale_list(axis_y, scale)
 
             if unit_z == "J/m3":
                 unit_z = r"$J/m^{3}$"
-            print(f"unit_z SI: {unit_z}")
             return [axis_z_data, unit_z]
         case _:
-            return f"Invalid unit type: {units}"
+            return [axis_y, f"Invalid unit type: {units}"]
 
 
 def fft_data_transform(dataX, dataY):
-    aa = 50
-    step = dataX[aa] - dataX[aa - 1]
+    """Bezpečný výpočet 1D FFT bez pevných indexů."""
+    if len(dataX) < 2 or len(dataY) < 2:
+        return [[], []]
 
-    # Perform FFT
+    step = float(np.diff(dataX).mean())
+    if step == 0:
+        return [[], []]
+
     fft_result = np.fft.fft(dataY)
     frequencies = np.fft.fftfreq(len(dataY), d=step)
-
-    # Get magnitude spectrum (optional)
     magnitude = np.abs(fft_result)
 
+    n_half = len(frequencies) // 2
+    return [frequencies[1:n_half], magnitude[1:n_half]]
 
-    return [frequencies[1:len(frequencies) // 2], magnitude[1:len(magnitude) // 2]]
 
-
-def extract_unit_from_label(label):
-    # Safely extract the unit inside square brackets
-    _, _, unit_part = label.partition("[")  # Splits into three parts: before "[", the "[", and after "["
-    unit1, _, _ = unit_part.partition("]")  # Extracts the unit inside brackets
-    unit1 = unit1.strip()  # Trim whitespace for safety
-
-    return unit1
+def extract_unit_from_label(label: str) -> str:
+    """Extrahuje fyzikální jednotku z popisku osy (uvnitř závorek [...])."""
+    if "[" in label and "]" in label:
+        _, _, unit_part = label.partition("[")
+        unit1, _, _ = unit_part.partition("]")
+        return unit1.strip()
+    return label.strip()
 
 
 def extract_half(data):

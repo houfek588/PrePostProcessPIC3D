@@ -1,130 +1,93 @@
-import json
-import post_process.read_files as read
+"""
+vtk_processing.py - Zpracování výstupních VTK souborů z iPIC3D do NumPy mezipaměti.
+"""
+
 import os
 import re
 import numpy as np
+import post_process.read_files as read
+from post_process.config_manager import load_config, to_bool
 
 
-def extract_number(filename):
-    """
-    Extracts a numeric value from a given filename.
-
-    Parameters:
-    filename (str): The filename from which to extract the number.
-
-    Returns:
-    int: The extracted number if found.
-    float: Returns infinity if no number is found (ensures such files are sorted last).
-    """
-
-    # Use regex to find the last numeric sequence before the file extension
+def extract_number(filename: str):
+    """Extrahuje číslo z názvu souboru pro správné numerické řazení."""
     match = re.search(r"(\d+)(?=\.[^.]+$)", filename)
-
-    # Convert the extracted number to an integer, or return infinity if no match is found
-    return int(match.group()) if match else float('inf')
+    return int(match.group()) if match else float("inf")
 
 
-def process_folder(folder, variable_name, extract_number):
-    """
-    Processes a folder to find and sort specific .vtk files based on a given variable name.
+def process_folder(folder: str, variable_name: str, sort_key_func=extract_number) -> list:
+    """Filtruje a seřadí .vtk soubory v dané složce podle názvu proměnné."""
+    if not os.path.exists(folder):
+        print(f"[Warning] Složka '{folder}' neexistuje.")
+        return []
 
-    Parameters:
-    folder (str): The path to the folder containing files.
-    variable_name (str): The variable name to filter files by.
-    extract_number (function): A function that extracts a numeric value for sorting.
-
-    Returns:
-    list: A sorted list of filenames that contain the specified variable name.
-    str: A message if the folder is empty.
-    """
-
-    # List all files in the specified folder
     files = os.listdir(folder)
-
-    # Check if the folder is empty
     if not files:
-        return "The source data folder is empty."
+        print(f"[Warning] Složka '{folder}' je prázdná.")
+        return []
 
-    # Filter for .vtk files only
     vtk_files = [f for f in files if f.endswith(".vtk")]
-
-    # Further filter for files containing the specified variable name
     par_files = [f for f in vtk_files if variable_name in f]
+    par_sorted_files = sorted(par_files, key=sort_key_func)
 
-    # Sort the filtered files based on extracted numerical values
-    par_sorted_files = sorted(par_files, key=extract_number)
-
-    # Print the number of files to be processed
-    print(f"The source data folder has {len(par_sorted_files)} files to process...")
-
-    # Return the sorted list of files
+    print(f"Zdrojová složka má {len(par_sorted_files)} VTK souborů k analýze pro '{variable_name}'...")
     return par_sorted_files
 
 
-def read_step_size(type):
-    # with open("parameters_vtk.json", "r") as file:
-    #     parameters = json.load(file)
-    # return parameters["sim_parameters"]["step"]
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-
-    if type == "part":
-        return parameters["ParticleOutputCycle"]
-    else:
-        return parameters["FieldOutputCycle"]
+def read_step_size(data_type: str = "field") -> int:
+    """Vrátí krok ukládání polí nebo částic z konfigurace."""
+    cfg = load_config()
+    if data_type == "part":
+        return int(cfg.get("ParticleOutputCycle", 100000))
+    return int(cfg.get("FieldOutputCycle", 10))
 
 
-def result_analysis(set_data):
+def result_analysis(set_data: str):
     """
-        Analyze VTK result data and save a 2D numpy array to file.
-        The function processes data from a specified simulation result category and axis.
-        """
+    Analyzuje VTK soubory pro zadanou proměnnou (např. 'Efield_x', 'rhoe0')
+    a uloží 2D NumPy pole do script_data/{set_data}_data2D.npy.
+    """
+    print(f"Spouštím VTK analýzu pro: {set_data}...")
 
-    print("start VTK analysing...")
-
-    # Load configuration from JSON file
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-
-    # Extract relevant parameters
-    folder = parameters["result_folder"]
+    cfg = load_config()
+    folder = cfg.get("result_folder", "")
     step = read_step_size("field")
 
-    # Load HDF settings from simulation output
-    setting = read.ReadHDFSettings(folder + "settings.hdf")
+    # Načtení simulačních metadat z settings.hdf (pokud existuje)
+    settings_path = os.path.join(folder, "settings.hdf")
+    setting = read.ReadHDFSettings(settings_path)
     nx = setting.get_num_cells("x")
     nz = setting.get_num_cells("z")
     dt = setting.get_time_step_size()
     num_of_files = setting.get_time_step_cycles()
 
-    # Extract variable name and axis from input set_data
+    # Rozdělení názvu na kategorii a osu (např. 'Efield_x' -> 'Efield', 'x')
     name_split = set_data.split("_")
     category = name_split[0] if name_split else ""
     axis = name_split[1] if len(name_split) > 1 else "x"
 
-    print(f"data quatity to analyze: {category}, specification: {axis}")
+    print(f"Veličina k analýze: {category}, složka: {axis}")
 
-    # Mapping for known vector fields
     field_map = {"Efield": "E", "Bfield": "B"}
-
-    # Special cases where the variable name includes the axis
     special_cases = {"rhoe", "rhoi", "Je", "Ji"}
 
-    # Determine the actual variable name to look for
     if category in field_map:
         variable_name = field_map[category]
-    elif (category+axis) in special_cases:
+    elif (category + axis) in special_cases:
         variable_name = category + axis
     else:
         variable_name = category
 
-    # Sort and select relevant files for processing
-    par_sorted_files = process_folder(folder, "_" + str(variable_name) + "_", extract_number)
+    par_sorted_files = process_folder(folder, f"_{variable_name}_", extract_number)
+    if not par_sorted_files:
+        # Zkusíme bez podtržítek
+        par_sorted_files = process_folder(folder, str(variable_name), extract_number)
 
-    # Read data from VTK files
+    if not par_sorted_files:
+        raise FileNotFoundError(f"Nebyly nalezeny žádné VTK soubory pro proměnnou '{variable_name}' v '{folder}'.")
+
     pic_data = read.ReadVTKFilesData(folder, par_sorted_files, num_of_files, step, dt, nx, nz, variable_name, axis)
 
-    # Mapping categories to the desired output variable names
     proc_var_dict = {
         "Efield": "Efield",
         "Bfield": "Bfield",
@@ -135,65 +98,46 @@ def result_analysis(set_data):
         "Ji": "ion_current",
     }
 
-    print(f"Are data in vector format: {pic_data.is_vector()}")
-
-    # Reconstruct the set_data string based on whether it's a vector field
+    base_cat = proc_var_dict.get(category, category)
     if pic_data.is_vector():
-        set_data = f"{proc_var_dict[category]}_{axis}"
+        out_var_name = f"{base_cat}_{axis}"
     else:
-        set_data = f"{proc_var_dict[category]}"
+        out_var_name = f"{base_cat}"
 
-    # Save processed 2D data as .npy
-    output_file = "script_data/" + set_data + "_data2D.npy"
+    # Zajištění existence složky script_data
+    os.makedirs("script_data", exist_ok=True)
+    output_file = os.path.join("script_data", f"{out_var_name}_data2D.npy")
 
     np.save(output_file, pic_data.get_2D_data())
-    print(f"new file created: {output_file}")
-
-    print("VTK analysing done")
+    print(f"VTK data úspěšně uložena do mezipaměti: {output_file}")
 
 
-def conserve_analysis(set_data):
+def conserve_analysis(set_data: str):
     """
-        Analyze conserved quantities (like kinetic or electric energy)
-        from simulation results and save them as a 1D NumPy array.
+    Analyzuje integrální konzervované veličiny (energie) ze souboru ConservedQuantities.txt
+    a uloží je jako 1D NumPy pole do script_data/{set_data}_data1D.npy.
+    """
+    cfg = load_config()
+    folder = cfg.get("result_folder", "")
 
-        Parameters:
-            set_data (str): The key indicating which type of energy to analyze.
-                            Supported values: "energy_kin", "energy_ele"
-        """
-    # Load configuration from JSON
-    with open("config.json", "r") as file:
-        parameters = json.load(file)
-
-    folder = parameters["result_folder"]
-
-    # Read conserved quantities from file
     energy_data = read.ReadConsData(folder, "ConservedQuantities.txt")
 
-    # Define supported types of conserved energy data
     supported = {
         "energy_kin": energy_data.get_k_energy,
         "energy_ele": energy_data.get_e_energy,
         "energy_kin0": energy_data.get_k_spec0_energy,
         "energy_kin1": energy_data.get_k_spec1_energy,
         "energy_kin2": energy_data.get_k_spec2_energy,
-        "energy_total": energy_data.get_total_energy
+        "energy_total": energy_data.get_total_energy,
     }
 
-    # Check if the requested data is available
-    if set_data in supported:
-        new_file_name = f"script_data/{set_data}_data1D.npy"
+    if set_data not in supported:
+        raise ValueError(f"Nepodporovaná veličina energií: '{set_data}'. Dostupné: {list(supported.keys())}")
 
-        # Call the appropriate method and extract the values
-        data = supported[set_data]()  # returns tuple (x, y)
-        np.save(new_file_name, data[1])  # Save only y-values
+    os.makedirs("script_data", exist_ok=True)
+    new_file_name = os.path.join("script_data", f"{set_data}_data1D.npy")
 
-        print(f"New file created: {new_file_name}")
-        return
-
-    # If unsupported data type is requested
-    print(f"Data '{set_data}' not available")
-    raise ValueError(f"Data '{set_data}' not available")
-
-
-
+    data = supported[set_data]()  # Vrací tuple: (title, list_of_values)
+    values = data[1] if isinstance(data, (list, tuple)) and len(data) > 1 else data
+    np.save(new_file_name, np.asarray(values, dtype=float))
+    print(f"Data energií uložena do mezipaměti: {new_file_name}")
