@@ -1,0 +1,94 @@
+
+<--------------------------------------------------------------------------->
+
+PHYSICAL INPUTS
+
+	magnetic induction; 		B = 10 nT
+	ion density; 				n_i = 10 cm-3
+	ion temperature; 			T_i = 10 eV
+	electron density; 			n_i = 10 cm-3
+	electron temperature; 		T_e = 10 eV
+	beam electron density; 		n_b = 0.01 cm-3
+	beam electron temperature; 	T_b = 3.0 eV
+	beam electron velocity; 	v_b = 5 * v_th
+
+<--------------------------------------------------------------------------->
+
+PHYSICAL PARAMETERS
+
+	debye length = 					23.508188696828835 m
+	plasma wave length = 			127.91741313781844 m
+	magnetic field: 				1e-08 T
+
+	electron plasma frequency = 	33306.35624956444 s-1 = 5300.871233497821 Hz
+	electron plasma wave period = 	0.00018864823459221103 s
+	electron skin depth = 			9001.058409201412 m
+	electron temperature = 			116045.18121550084 K
+
+	ion plasma frequency = 			4163.294531195555 s-1 = 662.6089041872276 Hz
+	ion plasma wave period = 		0.0015091858767376882 s
+	ion skin depth = 				72008.4672736113 m
+	ion temperature = 			116045.18121550084 K
+	ion thermal velocity: 			30949.690051761405 m/s
+	electron thermal velocity: 		247597.52041409124 m/s
+	beam velocity = 				678073.735565718 m/s
+
+Stability condition
+	c*dT <= dx
+	 7.200846727361131 <= 8.790096102735754
+															 Condition OK
+
+	c = isk * om_i
+	 299792458.0 <= 299792458.0
+															 Condition OK
+duration of simulation: 1.9215551386182321 ms
+
+<--------------------------------------------------------------------------->
+
+SIMULATION PARAMETERS
+
+	max time step: 0.0001220703125
+	max cell size: 0.000217642818841517
+	for length: L = 0.5 it is at least nc = 2297 cells
+
+Numerical condition
+	dT <= L/N
+	 0.0001 <= 0.0001220703125
+															 Condition OK
+
+Check light velocity, c/om_pi = 1.0
+
+x length: 0.5 isd = 72008.4672736113 m;  (isd = ion skin depth)
+dt time: 1 if = 0.00024019439232727898 s;  (if = ion frequency)
+	in SIM: x length: 0.5 isd = 36004.23363680565 m
+	in SIM: dt time: 0.0001 if = 2.40194392327279e-08 s
+
+number of cells in x direction is 4096
+	in SIM: length step size: 8.790096102735754 m
+	in SIM: length step size in Debye length: 2.674394957924561 dl
+															 Size step OK
+
+simulation resolution is dx = 0.0001220703125 (should be < 1)
+there should be 0.0001220703125 < 9001.058409201412 < 72008.4672736113
+light length during 1 time step: 7.200846727361131 m, it travels through 0.819 cells < 1
+															 Condition OK
+Input magnetic field
+	mag. field: 0.0002300782005987522
+
+background proton parameters:
+	thermal velocity: 	0.0001032370535877904
+	drift velocity: 	0
+	density: 			10000000.0
+
+background electron parameters:
+	thermal velocity: 	0.0008258964287023232
+	drift velocity: 	0
+	density: 			10000000.0
+
+beam electron parameters:
+	thermal velocity: 	0.00045236210416321954
+	drift velocity: 	0.0022618105208160977
+	density: 			10000.0
+
+<--------------------------------------------------------------------------->
+

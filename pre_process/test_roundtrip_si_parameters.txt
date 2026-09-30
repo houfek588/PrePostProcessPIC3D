@@ -1,0 +1,142 @@
+================================================================================
+ PŘEVOD VSTUPNÍCH PARAMETRŮ iPIC3D DO SOUSTAVY JEDNOTEK SI
+================================================================================
+ Vstupní soubor : C:\Projects\Phd\PrePostProcessPIC3D\pre_process\test_roundtrip.inp
+ Datum převodu  : 2026-09-29 16:44:38
+ Základní škála : n_0 = 1.0000e+07 m^-3 (10.00 cm^-3)
+ Zdroj reference: uživatelsky zadaná hustota pozadí (10.00 cm^-3)
+================================================================================
+
+[1] ZÁKLADNÍ NORMALIZAČNÍ ŠKÁLY (IONTOVÉ PARAMETRY)
+--------------------------------------------------------------------------------
+  Rychlost světla [c]          : 2.997925e+08 m/s  (v_sim = 1.0)
+  Iontová plazmová frekvence   : omega_pi = 4163.2945 rad/s (f_pi = 662.61 Hz)
+  Časová perioda iontů [1/w_pi]: t_0 = 2.401944e-04 s (0.2402 ms)
+  Ion skin depth (škála délky) : d_i = 72008.4673 m (72.008 km)
+  Škála magnetického pole [B_0]: B_0 = 4.346348e-05 T (43463.48 nT)
+  Škála elektrického pole [E_0]: E_0 = 13030.0245 V/m
+  Škála hustoty plazmatu [n_0] : n_0 = 1.0000e+07 m^-3 (10.00 cm^-3)
+  Referenční iontová hmotnost  : m_i = 1.672622e-27 kg (proton)
+  Elementární náboj            : e   = 1.602177e-19 C
+
+[2] ČASOVÉ PARAMETRY SIMULACE
+--------------------------------------------------------------------------------
+  Časový krok (simulace)       : dt = 0.0001 [1/omega_pi]
+  Časový krok (SI)             : dt_SI = 2.401944e-08 s (24.019 ns)
+  Počet časových cyklů         : ncycles = 80000
+  Celková doba simulace (SI)   : T_total = 1.921555e-03 s (1.9216 ms)
+  Celkový počet iont. period   : 8.000 [1/omega_pi]
+  Výstup polí (FieldOutputCycle): každých 10 cyklů = 0.240 us (8000 snímků)
+  Výstup částic (PartOutputCycle): každých 5000 cyklů = 0.1201 ms (16 snímků)
+
+[3] GEOMETRIE BOXU A DISKRETIZACE SÍTĚ
+--------------------------------------------------------------------------------
+  Rozměry boxu (simulace)      : Lx = 0.5 d_i,  Ly = 0.1 d_i,  Lz = 0.1 d_i
+  Rozměry boxu (SI - metry)    : Lx = 36004.234 m,  Ly = 7200.847 m,  Lz = 7200.847 m
+  Rozměry boxu (SI - kilometry): Lx = 36.0042 km,  Ly = 7.2008 km,  Lz = 7.2008 km
+  Objem simulačního boxu       : V_box = 1.8669e+12 m^3
+  Počet buněk sítě (nxc,nyc,nzc): 4096 x 1 x 1  (celkem 4096 buněk)
+  Velikost buňky dx, dy, dz    : dx = 8.7901 m,  dy = 7200.8467 m,  dz = 7200.8467 m
+  MPI domény (XLEN, YLEN, ZLEN): 32 x 1 x 1
+  Periodické okraje (X, Y, Z)  : PERIODICX=1, PERIODICY=1, PERIODICZ=1
+
+[4] MAGNETICKÉ POLE
+--------------------------------------------------------------------------------
+  B (simulace) [Bx, By, Bz]    : [0.000230078, 0, 0]  (|B| = 0.000230078)
+  B (SI - Tesla)               : [1.000000e-08, 0.000000e+00, 0.000000e+00] T
+  B (SI - nanotesla)           : [10.000, 0.000, 0.000] nT  (|B| = 10.000 nT)
+  Alfvénova rychlost (v_A/c)   : v_A / c = |B_sim| = 0.000230078  (v_A = 68975.709 m/s = 68.976 km/s)
+
+[5] PARAMETRY JEDNOTLIVÝCH DRUHŮ ČÁSTIC
+--------------------------------------------------------------------------------
+
+  Druh #0: Elektrony (qom = -64.0)
+  --------------------------------------------------
+    Hmotnost částice m_s       : 2.613472e-29 kg  (m_i / m_s = 64.00)
+    Náboj částice q_s          : -1.602177e-19 C  (-1.0 e)
+    Normalizovaná hustota rho  : 0.999
+    Koncentrace n_s            : 9.9900e+06 m^-3  (9.9900 cm^-3)
+    Tepelná rychlost vth (sim) : [0.000825896, 0.000825896, 0.000825896] c
+    Tepelná rychlost vth (SI)  : [247597.52, 247597.52, 247597.52] m/s  (|vth| = 428851.49 m/s)
+    Tepelná rychlost vth (km/s): [247.598, 247.598, 247.598] km/s
+    Teplota v ose X (T_x)      : 10.000 eV  (116045.2 K)
+    Izotropní teplota (T_iso)  : 10.000 eV  (116045.2 K)
+    Driftová rychlost u0 (sim) : [0, 0, 0] c
+    Driftová rychlost u0 (SI)  : [0.00, 0.00, 0.00] m/s  (0.000 km/s)
+    Plazmová frekvence w_ps    : 33289.6989 rad/s  (f_ps = 5298.22 Hz, perioda = 188.743 us)
+    Cyklotronní frekvence w_cs : 61.3045 rad/s  (f_cs = 9.76 Hz)
+    Larmorův poloměr r_L       : 4038.8127 m  (4.0388 km)
+    Skin depth druhu d_s       : 9005.5623 m  (9.006 km)
+    Debyeova délka lambda_D    : 7.4377 m
+    Makročástice na buňku      : 50 x 1 x 1 = 50
+    Celkem makročástic v boxu  : 204,800
+    Fyzikální částice / makroč.: 9.1066e+13 (váha částice)
+
+  Druh #1: Ionty (protony) (qom = 1.0)
+  --------------------------------------------------
+    Hmotnost částice m_s       : 1.672622e-27 kg  (m_i / m_s = 1.00)
+    Náboj částice q_s          : +1.602177e-19 C  (+1.0 e)
+    Normalizovaná hustota rho  : 1
+    Koncentrace n_s            : 1.0000e+07 m^-3  (10.0000 cm^-3)
+    Tepelná rychlost vth (sim) : [0.000103237, 0.000103237, 0.000103237] c
+    Tepelná rychlost vth (SI)  : [30949.69, 30949.69, 30949.69] m/s  (|vth| = 53606.44 m/s)
+    Tepelná rychlost vth (km/s): [30.950, 30.950, 30.950] km/s
+    Teplota v ose X (T_x)      : 10.000 eV  (116045.2 K)
+    Izotropní teplota (T_iso)  : 10.000 eV  (116045.2 K)
+    Driftová rychlost u0 (sim) : [0, 0, 0] c
+    Driftová rychlost u0 (SI)  : [0.00, 0.00, 0.00] m/s  (0.000 km/s)
+    Plazmová frekvence w_ps    : 4163.2945 rad/s  (f_ps = 662.61 Hz, perioda = 1509.186 us)
+    Cyklotronní frekvence w_cs : 0.9579 rad/s  (f_cs = 0.15 Hz)
+    Larmorův poloměr r_L       : 32310.5013 m  (32.3105 km)
+    Skin depth druhu d_s       : 72008.4673 m  (72.008 km)
+    Debyeova délka lambda_D    : 7.4339 m
+    Makročástice na buňku      : 50 x 1 x 1 = 50
+    Celkem makročástic v boxu  : 204,800
+    Fyzikální částice / makroč.: 9.1157e+13 (váha částice)
+
+  Druh #2: Elektronový svazek (qom = -64.0)
+  --------------------------------------------------
+    Hmotnost částice m_s       : 2.613472e-29 kg  (m_i / m_s = 64.00)
+    Náboj částice q_s          : -1.602177e-19 C  (-1.0 e)
+    Normalizovaná hustota rho  : 0.001
+    Koncentrace n_s            : 1.0000e+04 m^-3  (0.0100 cm^-3)
+    Tepelná rychlost vth (sim) : [0.000452362, 0.000452362, 0.000452362] c
+    Tepelná rychlost vth (SI)  : [135614.75, 135614.75, 135614.75] m/s  (|vth| = 234891.63 m/s)
+    Tepelná rychlost vth (km/s): [135.615, 135.615, 135.615] km/s
+    Teplota v ose X (T_x)      : 3.000 eV  (34813.6 K)
+    Izotropní teplota (T_iso)  : 3.000 eV  (34813.6 K)
+    Driftová rychlost u0 (sim) : [0.00226181, 0, 0] c
+    Driftová rychlost u0 (SI)  : [678073.74, 0.00, 0.00] m/s  (678.074 km/s)
+    Kinetická energie driftu   : 37.5000 eV  (6.0082e-18 J)
+    Poměr drift / termál (u/vth): 5.000
+    Plazmová frekvence w_ps    : 1053.2395 rad/s  (f_ps = 167.63 Hz, perioda = 5965.581 us)
+    Cyklotronní frekvence w_cs : 61.3045 rad/s  (f_cs = 9.76 Hz)
+    Larmorův poloměr r_L       : 2212.1488 m  (2.2121 km)
+    Skin depth druhu d_s       : 284638.4593 m  (284.638 km)
+    Debyeova délka lambda_D    : 128.7597 m
+    Makročástice na buňku      : 30 x 1 x 1 = 30
+    Celkem makročástic v boxu  : 122,880
+    Fyzikální částice / makroč.: 1.5193e+11 (váha částice)
+
+[6] INTEGRÁLNÍ CHARAKTERISTIKY PLAZMATU A STABILITNÍ KRITÉRIA
+--------------------------------------------------------------------------------
+  Celková nábojová hustota     : rho_q = +1.388395e-28 C/m^3
+  Kontrola kvazineutrality     : OK (odchylka 0.0000 % z e*n0)
+  Tepelný tlak plazmatu        : p_thermal = 3.203232e-11 Pa
+  Magnetický tlak              : p_mag = 3.978874e-11 Pa
+  Plazmové beta (p_th / p_mag) : beta = 0.8051
+
+  Podmínka rychlosti světla (CFL): c * dt <= dx
+    c * dt_SI                  : 7.2008 m  (c * dt_sim = 0.0001 d_i)
+    dx_SI                      : 8.7901 m  (dx_sim = 0.00012207 d_i)
+    Výsledek CFL               : SPLNĚNA (c * dt / dx = 0.819 <= 1.0)
+
+  Rozlišení Debyeovy délky elektronů:
+    Debyeova délka elektronů   : lambda_De = 7.4377 m
+    Velikost buňky dx_SI       : dx = 8.7901 m
+    Poměr dx / lambda_De       : 1.182 lambda_De
+    Kvalita rozlišení          : VÝBORNÁ (dx <= 2 * lambda_De, plně zachycuje elektrostatické vlny)
+
+================================================================================
+ KONEC PROTOKOLU
+================================================================================
