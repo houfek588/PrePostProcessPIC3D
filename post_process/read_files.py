@@ -5,9 +5,18 @@ read_files.py - Moduly pro čtení simulačních dat iPIC3D (VTK, HDF5, textové
 import re
 import csv
 import numpy as np
-import pyvista as pv
 import h5py
-import unit_convert
+
+try:
+    import pyvista as pv
+except ImportError:
+    pv = None
+
+try:
+    from . import unit_convert
+except ImportError:
+    import unit_convert
+
 
 
 def get_data_row(data, column, row):
@@ -143,7 +152,10 @@ class ReadVTKFilesData(BaseDataReader):
         return [f"{base_name_with_folder}{i}.{file_extension}" for i in range(0, num_of_files, step)]
 
     def read_file_time_dataset(self, file_paths, grid_x, grid_z):
+        if pv is None:
+            raise ImportError("Knihovna 'pyvista' není nainstalována. Pro načítání VTK souborů ji prosím nainstalujte (pip install pyvista).")
         if not isinstance(file_paths, list):
+
             raise ValueError("file_paths must be a list of strings representing file paths.")
 
         grow_data = []

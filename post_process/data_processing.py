@@ -5,12 +5,22 @@ data_processing.py - Zpracování mezipaměťových NumPy dat (.npy), přepočty
 import math
 import os
 import numpy as np
-import post_process.ploting as ploting
-import unit_convert
-import pre_process.unit_input as unit
-import post_process.read_files as read
-from post_process.config_manager import load_config, load_plot_config, to_bool
-from post_process.vtk_processing import read_step_size
+
+try:
+    from . import ploting
+    from . import unit_convert
+    from . import read_files as read
+    from .config_manager import load_config, load_plot_config, to_bool, get_cache_dir
+    from .vtk_processing import read_step_size
+    from .plasma_units import get_default_units
+except ImportError:
+    import ploting
+    import unit_convert
+    import read_files as read
+    from config_manager import load_config, load_plot_config, to_bool, get_cache_dir
+    from vtk_processing import read_step_size
+    from plasma_units import get_default_units
+
 
 # Definice klíčů konfigurací (odděleno od win.py pro zamezení cyklickým importům)
 SINGLE_CONFIG_KEYS = ("Value", "FFT", "Histogram", "Value2D", "FFT2D", "FFT in time")
@@ -58,8 +68,10 @@ class ReadNMPFileData:
 
     def __init__(self, set_data: str):
         self.set_data = set_data
-        file_2d = os.path.join("script_data", f"{set_data}_data2D.npy")
-        file_1d = os.path.join("script_data", f"{set_data}_data1D.npy")
+        cache_dir = get_cache_dir()
+        file_2d = os.path.join(cache_dir, f"{set_data}_data2D.npy")
+        file_1d = os.path.join(cache_dir, f"{set_data}_data1D.npy")
+
 
         if os.path.exists(file_2d):
             self.data = np.load(file_2d)
@@ -211,6 +223,7 @@ def graph_for_time_value(numpy_data, set_data, T, res_type="val", units="si", us
     x_level = -1 if T == 1 else int(len(var_data) * T)
 
     axis_time = numpy_data.get_time_axis()
+    unit = get_default_units()
     om_pi = unit.ion.get_plasma_frequency()
     calculation_time = (axis_time[x_level] / om_pi) if om_pi > 0 else axis_time[x_level]
 
@@ -261,6 +274,7 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type="val", units="si", 
     data_labels = []
     weights = []
 
+    unit = get_default_units()
     for idx, d in enumerate(numpy_data):
         var_data = d.get_data_x_t()
         x_level = -1 if T == 1 else int(len(var_data) * T)
@@ -270,6 +284,7 @@ def graph_multi_time_value(numpy_data, set_data, T, res_type="val", units="si", 
         calculation_time = (axis_time[x_level] / om_pi) if om_pi > 0 else axis_time[x_level]
 
         time_om = axis_time[x_level] * unit.electron.get_plasma_frequency() / (2.0 * math.pi)
+
 
         length_data = d.get_length_axis()
         ax_x, label_x = convert_x_axis(length_data, units)
@@ -338,8 +353,10 @@ def graph_for_pos_value(numpy_data, set_data, N, res_type="val", units="si", use
     var_data1d = var_data[:, x_level] if isinstance(var_data, np.ndarray) else [float(d[x_level]) for d in var_data]
 
     axis_position = numpy_data.get_length_axis()
+    unit = get_default_units()
     if units == "si":
         calc_pos = (axis_position[x_level] * unit.ion.get_ion_skin_depth() * Lx / nx) if nx > 0 else axis_position[x_level]
+
         title_unit = f"{round(calc_pos, 2)} m"
     elif units == "db":
         ax_x, lbl_x = convert_x_axis(axis_position, "db")
@@ -527,49 +544,50 @@ def convert_x_axis(axis_x, units="si"):
     nx = setting.get_num_cells("x")
     Lx = setting.get_box_size("x")
 
+    unit = get_default_units()
     d_i = unit.ion.get_ion_skin_depth()
     debye_len = unit.debye_len
     dx_si = (d_i * Lx / nx) if nx > 0 else 1.0
 
-    match units:
-        case "pic":
-            return [axis_x, r"$Length~~[d_i]$"]
-        case "si":
-            axis_x_SI = unit_convert.rescale_list(axis_x, dx_si)
-            return [axis_x_SI, r"$Length~~[m]$"]
-        case "db":
-            axis_x_SI = unit_convert.rescale_list(axis_x, dx_si)
-            axis_x_DB = unit_convert.rescale_list(axis_x_SI, 1.0 / debye_len) if debye_len > 0 else axis_x_SI
-            return [axis_x_DB, r"$Length~~[\lambda_{D}]$"]
-        case _:
-            return [axis_x, f"Invalid unit type: {units}"]
+    if units == "pic":
+        return [axis_x, r"$Length~~[d_i]$"]
+    elif units == "si":
+        axis_x_SI = unit_convert.rescale_list(axis_x, dx_si)
+        return [axis_x_SI, r"$Length~~[m]$"]
+    elif units == "db":
+        axis_x_SI = unit_convert.rescale_list(axis_x, dx_si)
+        axis_x_DB = unit_convert.rescale_list(axis_x_SI, 1.0 / debye_len) if debye_len > 0 else axis_x_SI
+        return [axis_x_DB, r"$Length~~[\lambda_{D}]$"]
+    else:
+        return [axis_x, f"Invalid unit type: {units}"]
 
 
 def convert_t_axis(axis_time, units="si"):
+    unit = get_default_units()
     om_pi = unit.ion.get_plasma_frequency()
     om_pe = unit.electron.get_plasma_frequency()
 
-    match units:
-        case "pic":
-            return [axis_time, r"$Time~~[1/\omega_{pi}]$"]
-        case "si":
-            t_scale = (1.0 / om_pi) if om_pi > 0 else 1.0
-            axis_time_SI = unit_convert.rescale_list(axis_time, t_scale)
-            return [axis_time_SI, r"$Time~~[s]$"]
-        case "db":
-            t_scale = (1.0 / om_pi) if om_pi > 0 else 1.0
-            axis_time_SI = unit_convert.rescale_list(axis_time, t_scale)
-            pe_factor = (om_pe / (2.0 * math.pi)) if om_pe > 0 else 1.0
-            axis_time_OM = unit_convert.rescale_list(axis_time_SI, pe_factor)
-            return [axis_time_OM, r"$Time~~[2\pi/\omega_{pe}]$"]
-        case _:
-            return [axis_time, f"Invalid unit type: {units}"]
+    if units == "pic":
+        return [axis_time, r"$Time~~[1/\omega_{pi}]$"]
+    elif units == "si":
+        t_scale = (1.0 / om_pi) if om_pi > 0 else 1.0
+        axis_time_SI = unit_convert.rescale_list(axis_time, t_scale)
+        return [axis_time_SI, r"$Time~~[s]$"]
+    elif units == "db":
+        t_scale = (1.0 / om_pi) if om_pi > 0 else 1.0
+        axis_time_SI = unit_convert.rescale_list(axis_time, t_scale)
+        pe_factor = (om_pe / (2.0 * math.pi)) if om_pe > 0 else 1.0
+        axis_time_OM = unit_convert.rescale_list(axis_time_SI, pe_factor)
+        return [axis_time_OM, r"$Time~~[2\pi/\omega_{pe}]$"]
+    else:
+        return [axis_time, f"Invalid unit type: {units}"]
 
 
 def convert_z_axis(axis_y, set_data, units="si"):
     variable = set_data.split("_")[0]
     category_full = "_".join(set_data.split("_")[:2]) if len(set_data.split("_")) > 2 else variable
 
+    unit = get_default_units()
     scale_factors = {
         "T": getattr(unit.c1, "b_field_const", 1.0),
         "m/s": getattr(unit.c1, "vel_const", unit.const_c),
@@ -580,20 +598,20 @@ def convert_z_axis(axis_y, set_data, units="si"):
         "A/m2": getattr(unit.c1, "charge_const", 1.0),
     }
 
-    match units:
-        case "pic":
-            unit_z = g_axis_pic_units.get(category_full, g_axis_pic_units.get(variable, "sim"))
-            return [axis_y, unit_z]
-        case "si" | "db":
-            unit_z = g_axis_si_units.get(category_full, g_axis_si_units.get(variable, "1"))
-            scale = scale_factors.get(unit_z, 1.0)
-            axis_z_data = unit_convert.rescale_list(axis_y, scale)
+    if units == "pic":
+        unit_z = g_axis_pic_units.get(category_full, g_axis_pic_units.get(variable, "sim"))
+        return [axis_y, unit_z]
+    elif units in ("si", "db"):
+        unit_z = g_axis_si_units.get(category_full, g_axis_si_units.get(variable, "1"))
+        scale = scale_factors.get(unit_z, 1.0)
+        axis_z_data = unit_convert.rescale_list(axis_y, scale)
 
-            if unit_z == "J/m3":
-                unit_z = r"$J/m^{3}$"
-            return [axis_z_data, unit_z]
-        case _:
-            return [axis_y, f"Invalid unit type: {units}"]
+        if unit_z == "J/m3":
+            unit_z = r"$J/m^{3}$"
+        return [axis_z_data, unit_z]
+    else:
+        return [axis_y, f"Invalid unit type: {units}"]
+
 
 
 def fft_data_transform(dataX, dataY):

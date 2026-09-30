@@ -5,8 +5,14 @@ vtk_processing.py - Zpracování výstupních VTK souborů z iPIC3D do NumPy mez
 import os
 import re
 import numpy as np
-import post_process.read_files as read
-from post_process.config_manager import load_config, to_bool
+
+try:
+    from . import read_files as read
+    from .config_manager import load_config, to_bool, get_cache_dir
+except ImportError:
+    import read_files as read
+    from config_manager import load_config, to_bool, get_cache_dir
+
 
 
 def extract_number(filename: str):
@@ -104,9 +110,9 @@ def result_analysis(set_data: str):
     else:
         out_var_name = f"{base_cat}"
 
-    # Zajištění existence složky script_data
-    os.makedirs("script_data", exist_ok=True)
-    output_file = os.path.join("script_data", f"{out_var_name}_data2D.npy")
+    # Zajištění existence složky mezipaměti
+    cache_dir = get_cache_dir()
+    output_file = os.path.join(cache_dir, f"{out_var_name}_data2D.npy")
 
     np.save(output_file, pic_data.get_2D_data())
     print(f"VTK data úspěšně uložena do mezipaměti: {output_file}")
@@ -115,7 +121,7 @@ def result_analysis(set_data: str):
 def conserve_analysis(set_data: str):
     """
     Analyzuje integrální konzervované veličiny (energie) ze souboru ConservedQuantities.txt
-    a uloží je jako 1D NumPy pole do script_data/{set_data}_data1D.npy.
+    a uloží je jako 1D NumPy pole do {cache_dir}/{set_data}_data1D.npy.
     """
     cfg = load_config()
     folder = cfg.get("result_folder", "")
@@ -134,10 +140,11 @@ def conserve_analysis(set_data: str):
     if set_data not in supported:
         raise ValueError(f"Nepodporovaná veličina energií: '{set_data}'. Dostupné: {list(supported.keys())}")
 
-    os.makedirs("script_data", exist_ok=True)
-    new_file_name = os.path.join("script_data", f"{set_data}_data1D.npy")
+    cache_dir = get_cache_dir()
+    new_file_name = os.path.join(cache_dir, f"{set_data}_data1D.npy")
 
     data = supported[set_data]()  # Vrací tuple: (title, list_of_values)
     values = data[1] if isinstance(data, (list, tuple)) and len(data) > 1 else data
     np.save(new_file_name, np.asarray(values, dtype=float))
     print(f"Data energií uložena do mezipaměti: {new_file_name}")
+

@@ -4,11 +4,20 @@ hdf5_processing.py - Zpracování částicových a polních dat z HDF5 souborů 
 
 import os
 import numpy as np
-import post_process.read_files as read
-from post_process.config_manager import load_config, to_bool
-from post_process import ploting
-import unit_convert
-import pre_process.unit_input as unit
+
+try:
+    from . import read_files as read
+    from . import ploting
+    from . import unit_convert
+    from .config_manager import load_config, to_bool, get_cache_dir
+    from .plasma_units import get_default_units
+except ImportError:
+    import read_files as read
+    import ploting
+    import unit_convert
+    from config_manager import load_config, to_bool, get_cache_dir
+    from plasma_units import get_default_units
+
 
 
 def create_particle_dict(ns: int) -> dict:
@@ -55,15 +64,17 @@ def result_analysis(set_data: str):
 
     p_file = read.ReadHDFParticleData(folder, hdf_file, number_files, species, symbol)
 
-    os.makedirs("script_data", exist_ok=True)
-    new_file_name = os.path.join("script_data", f"{set_data}_data2D.npy")
+    cache_dir = get_cache_dir()
+    new_file_name = os.path.join(cache_dir, f"{set_data}_data2D.npy")
     np.save(new_file_name, p_file.data_x_t)
 
     print(f"HDF5 data úspěšně uložena do mezipaměti: {new_file_name}")
 
 
+
 def get_axis_data(data, setting):
     """Přepočte osy délky a času do jednotek simulace (pic), SI a Debyeových délek (db)."""
+    unit = get_default_units()
     axis_x = data.get_len_data()
     axis_t = data.get_time_data()
 
@@ -91,6 +102,7 @@ def get_axis_data(data, setting):
 
 def particle_graphs(data: read.ReadHDFParticleData, par: dict, sett):
     """Vykreslí grafy pro částicová data."""
+    unit = get_default_units()
     axis_x_dict, axis_t_dict = get_axis_data(data, sett)
     units = "SI"
     data_name = data.get_data_name()
@@ -112,6 +124,7 @@ def particle_graphs(data: read.ReadHDFParticleData, par: dict, sett):
 
     velocity = data.get_particle1D_len(t)
     velocity_si = unit_convert.rescale_list(velocity, unit.const_c)
+
 
     description = ploting.PlotDescription(
         f"Length {data_name} data for t({round(axis_t_dict[units][t], 3)})",

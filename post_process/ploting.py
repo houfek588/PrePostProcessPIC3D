@@ -3,10 +3,18 @@ ploting.py - Vykreslování 1D, 2D a 3D grafů pomocí Matplotlib pro iPIC3D pos
 """
 
 import os
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 plot_immediately = False
+
+
+def setup_backend(headless: bool = True):
+    """Nastaví backend Matplotlibu. Pro server bez GUI používá 'Agg'."""
+    if headless:
+        matplotlib.use("Agg")
+
 
 
 class PlotDescription:
@@ -212,5 +220,8 @@ def plot_histogram(dataX, levels, descr: PlotDescription, weights=None, save_to_
 
 
 def plot_all_graphs():
-    """Zobrazí všechny vytvořené grafy na obrazovce."""
-    plt.show()
+    """Zobrazí všechny vytvořené grafy na obrazovce (pokud nejsme v headless režimu)."""
+    backend = matplotlib.get_backend().lower()
+    if backend not in ("agg", "cairo", "pdf", "svg", "ps"):
+        plt.show()
+
